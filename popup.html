@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Custom Web Background</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h3>Custom Web Background</h3>
+            <div class="toggle-switch">
+                <label for="enabledCheckbox">Enable Extension</label>
+                <input type="checkbox" id="enabledCheckbox">
+            </div>
+            <div class="toggle-switch" style="margin-top: 8px;">
+                <label for="forceTransparentCheckbox">Force Transparent</label>
+                <input type="checkbox" id="forceTransparentCheckbox">
+            </div>
+        </header>
+
+        <main id="settings-panel">
+
+            <section class="form-group">
+                <label>Background Image (JPG, PNG, GIF)</label>
+                <input type="file" id="imageUpload" accept="image/*" hidden>
+                <button id="uploadButton" class="button-secondary">Choose File...</button>
+                <span id="currentImageName">Using default image.</span>
+            </section>
+
+            <section class="form-group">
+                <label>Or Enter Image URL</label>
+                <input type="url" id="imageUrlInput" placeholder="https://example.com/image.jpg" style="width: 100%; margin-top: 6px; padding: 6px;">
+                <button id="applyUrlButton" class="button-secondary" style="margin-top: 6px;">Apply URL</button>
+            </section>
+
+            <section class="form-group">
+                <label for="blurSlider">Background Blur: <span id="blurValue">0px</span></label>
+                <input type="range" id="blurSlider" min="0" max="30" step="1" value="0">
+            </section>
+
+            <section class="form-group">
+                <label for="dimLevel">Background Dim: <span id="dimValue">40%</span></label>
+                <input type="range" id="dimLevel" min="0" max="1" step="0.05">
+            </section>
+
+            <section class="form-group">
+                <label>Dim Overlay Color:</label>
+                <div class="radio-group" id="dimColorGroup">
+                    <label><input type="radio" name="dimColor" value="dark" checked> Dark</label>
+                    <label><input type="radio" name="dimColor" value="light"> Light</label>
+                </div>
+            </section>
+
+            <section class="form-group chroma-key-section">
+                <label>Chroma Key (Make Colors Transparent)</label>
+                <p class="description">Click to pick colors from the page to hide.</p>
+                <ul id="colorList"></ul>
+                <button id="addColorButton" class="button-secondary">Add Color with Eyedropper</button>
+            </section>
+
+        </main>
+
+        <footer>
+            <button id="saveButton" class="button-primary">Apply & Save</button>
+            <div id="status"></div>
+            <p class="donate-link">
+                Gimmie your money please:
+                <a href="https://ko-fi.com/kemalavicennafaza" target="_blank" rel="noopener noreferrer">
+                    ko-fi.com/kemalavicennafaza
+                </a>
+            </p>
+        </footer>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

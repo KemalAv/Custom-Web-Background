@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Custom Web Background",
+  "version": "3.14",
+  "description": "Tired of boring plain pages? This extension lets you add your own background image behind every website you visit.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ]
+}
