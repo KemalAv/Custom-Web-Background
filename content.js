@@ -1,252 +1,205 @@
-(() => {
-    const BG_CONTAINER_ID = 'universal-bg-container';
-    const isTopFrame = window.self === window.top;
-    let currentSettings = {};
-    let bgContainer, bgImage, bgOverlay, styleTag;
+// --- STATE ---
+const videoCache = new Map();
+const processedElements = new Map();
+let lastRequestTime = 0;
+let apiCooldownUntil = 0;
+const MIN_DELAY_MS = 2000;
+const CACHE_TTL = 24 * 60 * 60 * 1000;
 
-    /** Helpers **/
-    function debounce(fn, delay) {
-        let timer;
-        return (...args) => {
-            clearTimeout(timer);
-            timer = setTimeout(() => fn.apply(null, args), delay);
-        };
-    }
+// --- SETTINGS ---
+let displaySettings = {
+    showLabels: true,
+    showTier: true,
+    showLikeRatio: true,
+    showRating: true,
+    showVotes: true,
+    showEngagementRate: true
+};
 
-    function fetchSettings(callback) {
-        try {
-            if (!chrome?.runtime?.id) return;
-            chrome.storage.local.get(null, (settings) => {
-                currentSettings = settings || {};
-                callback?.();
-            });
-        } catch { }
-    }
-
-    function initContainer() {
-        if (bgContainer) return;
-
-        bgContainer = document.createElement('div');
-        bgContainer.id = BG_CONTAINER_ID;
-        Object.assign(bgContainer.style, {
-            position: 'fixed',
-            top: 0, left: 0,
-            width: '100vw', height: '100vh',
-            zIndex: '-2147483647',
-            pointerEvents: 'none',
-            overflow: 'hidden',
-            opacity: 0,
-            transition: 'opacity 0.5s ease',
-        });
-
-        bgImage = document.createElement('img');
-        Object.assign(bgImage.style, {
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: 0,
-            transition: 'opacity 0.5s ease',
-        });
-
-        bgOverlay = document.createElement('div');
-        Object.assign(bgOverlay.style, {
-            position: 'absolute',
-            inset: 0,
-            opacity: 0,
-            transition: 'opacity 0.5s ease',
-        });
-
-        bgContainer.append(bgImage, bgOverlay);
-        document.documentElement.prepend(bgContainer);
-    }
-
-    function applyChromaKey() {
-        if (!document.head) return;
-
-        if (!styleTag) {
-            styleTag = document.createElement('style');
-            styleTag.id = 'chroma-key-styles';
-            document.head.appendChild(styleTag);
+// --- LOAD SETTINGS ---
+async function loadAndMonitorSettings() {
+    const { displayPreferences } = await chrome.storage.sync.get('displayPreferences');
+    Object.assign(displaySettings, displayPreferences || {});
+    chrome.storage.onChanged.addListener((changes, ns) => {
+        if (ns === 'sync' && changes.displayPreferences) {
+            Object.assign(displaySettings, changes.displayPreferences.newValue || {});
+            rerenderAllVisibleBadges();
         }
+    });
+}
 
-        if (!currentSettings.isEnabled) {
-            styleTag.textContent = '';
+// --- CACHE UTILS ---
+async function getPersistentCache(videoId) {
+    const result = await chrome.storage.local.get(videoId);
+    const cached = result[videoId];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.tierData;
+    }
+    return null;
+}
+
+function setPersistentCache(videoId, tierData) {
+    chrome.storage.local.set({ [videoId]: { tierData, timestamp: Date.now() } });
+}
+
+// --- API UTILS ---
+async function limitedFetch(url) {
+    const now = Date.now();
+    const waitTime = Math.max(0, MIN_DELAY_MS - (now - lastRequestTime));
+    if (waitTime > 0) await new Promise(res => setTimeout(res, waitTime));
+    lastRequestTime = Date.now();
+    return fetch(url);
+}
+
+// --- VIEW COUNT ---
+function getViewCount(el) {
+    const text = el.querySelector('#metadata-line span:first-of-type')?.textContent || '';
+    const raw = text.toLowerCase().replace(/,/g, '').replace(/[^0-9.kmb]/g, '');
+    let val = parseFloat(raw);
+    if (isNaN(val)) return 0;
+    if (raw.endsWith('k')) val *= 1e3;
+    else if (raw.endsWith('m')) val *= 1e6;
+    else if (raw.endsWith('b')) val *= 1e9;
+    return Math.floor(val);
+}
+
+// --- TIER SYSTEM ---
+const TIER_LADDER = [
+    { minLikeRatio: 100, tier: 'PERFECT',   colorClass: 'tier-perfect',        rating: '10' },
+    { minLikeRatio: 99.9, tier: 'X',   colorClass: 'tier-x',        rating: '9.9' },
+    { minLikeRatio: 99.8, tier: 'SSS', colorClass: 'tier-sss',      rating: '9.7' },
+    { minLikeRatio: 99.5, tier: 'SS+', colorClass: 'tier-ss-plus',    rating: '9.4' },
+    { minLikeRatio: 99.0, tier: 'SS',  colorClass: 'tier-ss',       rating: '9.0' },
+    { minLikeRatio: 98.0, tier: 'S+',  colorClass: 'tier-s-plus',     rating: '8.5' },
+    { minLikeRatio: 96.0, tier: 'S',   colorClass: 'tier-s',        rating: '8.0' },
+    { minLikeRatio: 92.0, tier: 'A+',  colorClass: 'tier-a-plus',     rating: '7.5' },
+    { minLikeRatio: 88.0, tier: 'A',   colorClass: 'tier-a',        rating: '7.0' },
+    { minLikeRatio: 84.0, tier: 'A-',  colorClass: 'tier-a-minus',    rating: '6.5' },
+    { minLikeRatio: 80.0, tier: 'B+',  colorClass: 'tier-b-plus',     rating: '6.0' },
+    { minLikeRatio: 76.0, tier: 'B',   colorClass: 'tier-b',        rating: '5.5' },
+    { minLikeRatio: 72.0, tier: 'B-',  colorClass: 'tier-b-minus',    rating: '5.0' },
+    { minLikeRatio: 68.0, tier: 'C+',  colorClass: 'tier-c-plus',     rating: '4.5' },
+    { minLikeRatio: 54.0, tier: 'C',   colorClass: 'tier-c',        rating: '4.0' },
+    { minLikeRatio: 50.0, tier: 'C-',  colorClass: 'tier-c-minus',    rating: '3.5' },
+    { minLikeRatio: 45.0, tier: 'D+',  colorClass: 'tier-d-plus',     rating: '3.0' },
+    { minLikeRatio: 40.0, tier: 'D',   colorClass: 'tier-d',        rating: '2.5' },
+    { minLikeRatio: 35.0, tier: 'D-',  colorClass: 'tier-d-minus',    rating: '2.0' },
+    { minLikeRatio: 30.0, tier: 'E+',  colorClass: 'tier-e-plus',     rating: '1.5' },
+    { minLikeRatio: 25.0, tier: 'E',   colorClass: 'tier-e',        rating: '1.0' },
+    { minLikeRatio: 20.0, tier: 'E-',  colorClass: 'tier-e-minus',    rating: '0.5' },
+    { minLikeRatio: 15.0, tier: 'F+',  colorClass: 'tier-f-plus',     rating: '0.3' },
+    { minLikeRatio: 10.0, tier: 'F',   colorClass: 'tier-f',        rating: '0.2' },
+    { minLikeRatio: 5, tier: 'F-',   colorClass: 'tier-f-minus',        rating: '0.1' },
+    { minLikeRatio: 0, tier: 'N/A',   colorClass: 'tier-na',        rating: 'N/A' },
+];
+ // gunakan dari kode asli lo
+function getTierData(likes, dislikes, views) {
+    const total = likes + dislikes;
+    const ratio = (likes / total) * 100;
+    const engagement = views > 0 ? `${((total / views) * 100).toFixed(2)}%` : 'N/A';
+    const tier = TIER_LADDER.find(t => ratio >= t.minLikeRatio) || { tier: 'N/A', colorClass: 'tier-na', rating: 'N/A' };
+    return {
+        tier: tier.tier,
+        colorClass: tier.colorClass,
+        likeRatio: ratio.toFixed(ratio > 95 ? 2 : 1) + '%',
+        rating: tier.rating,
+        totalVotes: total,
+        engagementRate: engagement
+    };
+}
+
+// --- BADGE INJECTION ---
+function injectBadge(element, tierData, type) {
+    element.querySelector('.tier-badge')?.remove();
+    const lines = [];
+    const add = (label, val, fmt = v => v) => {
+        if (!val || val === 'N/A') return;
+        const labelHtml = displaySettings.showLabels ? `<span class="tier-label">${label}:</span>` : '';
+        lines.push(`<div class="tier-data-line">${labelHtml}<span>${fmt(val)}</span></div>`);
+    };
+    if (displaySettings.showTier) add('Tier', tierData.tier);
+    if (displaySettings.showLikeRatio) add('Like Ratio', tierData.likeRatio);
+    if (displaySettings.showRating) add('Rating', tierData.rating, r => `${r}/10`);
+    if (displaySettings.showVotes) add('Total Votes', tierData.totalVotes, v => v.toLocaleString());
+    if (displaySettings.showEngagementRate) add('Engagement Rate', tierData.engagementRate);
+
+    const badge = document.createElement('div');
+    badge.className = `tier-badge ${tierData.colorClass}`;
+    badge.innerHTML = lines.join('');
+    if (type === 'watch-bar') {
+        badge.id = 'video-tier-bar-watch';
+        element.querySelector('#actions')?.parentElement.insertBefore(badge, element.querySelector('#actions'));
+    } else {
+        badge.classList.add('video-tier-badge-thumbnail');
+        element.querySelector('#meta, #details')?.appendChild(badge);
+    }
+}
+
+// --- ELEMENT PROCESSOR ---
+async function processElement(el) {
+    const type = el.matches('ytd-watch-flexy') ? 'watch-bar' : 'thumbnail';
+    const href = el.matches('ytd-watch-flexy') ? window.location.href : el.querySelector('a#thumbnail')?.href;
+    const videoId = href?.match(/[?&]v=([^&]+)/)?.[1];
+    if (!videoId || el.dataset.tierRatedId === videoId) return;
+    el.dataset.tierRatedId = videoId;
+
+    if (videoCache.has(videoId)) {
+        const data = videoCache.get(videoId);
+        injectBadge(el, data, type);
+        processedElements.set(el, { tierData: data, type });
+        return;
+    }
+
+    try {
+        if (Date.now() < apiCooldownUntil) return;
+
+        const cached = await getPersistentCache(videoId);
+        if (cached) {
+            videoCache.set(videoId, cached);
+            injectBadge(el, cached, type);
+            processedElements.set(el, { tierData: cached, type });
             return;
         }
 
-        if (currentSettings.forceTransparent) {
-            styleTag.textContent = `
-                *:not(#${BG_CONTAINER_ID}):not(#${BG_CONTAINER_ID} *),
-                body {
-                    background: transparent !important;
-                    background-color: transparent !important;
-                    background-image: none !important;
-                }
-            `;
+        const views = getViewCount(el);
+        const res = await limitedFetch(`https://returnyoutubedislikeapi.com/votes?videoId=${videoId}`);
+        if (res.status === 429) {
+            console.warn('[Ratiometer] Rate limited! Cooling down...');
+            apiCooldownUntil = Date.now() + 60000;
             return;
         }
-
-        const colors = currentSettings.chromaKeyColors || [];
-        if (colors.length === 0) {
-            styleTag.textContent = '';
-            return;
-        }
-
-        const rules = colors.map(color => `
-            *[data-bg-color="${color}"] {
-                background: transparent !important;
-                background-color: transparent !important;
-                background-image: none !important;
-            }
-        `).join('\n') + `
-            body {
-                background: transparent !important;
-                background-color: transparent !important;
-                background-image: none !important;
-            }
-        `;
-
-        styleTag.textContent = rules;
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const json = await res.json();
+        const data = getTierData(json.likes, json.dislikes, views);
+        videoCache.set(videoId, data);
+        setPersistentCache(videoId, data);
+        injectBadge(el, data, type);
+        processedElements.set(el, { tierData: data, type });
+    } catch (err) {
+        console.warn('RatioMeter error:', err);
+        el.removeAttribute('data-tier-rated-id');
     }
+}
 
-    function safeTagElements(root) {
-        if (!root || !currentSettings.isEnabled || currentSettings.forceTransparent) return;
-
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-            acceptNode(node) {
-                if (
-                    node.hasAttribute('data-bg-color') ||
-                    node.closest('[data-reactroot], [data-react-checksum]')
-                ) {
-                    return NodeFilter.FILTER_REJECT;
-                }
-                return NodeFilter.FILTER_ACCEPT;
-            }
-        });
-
-        while (walker.nextNode()) {
-            const el = walker.currentNode;
-            try {
-                const bg = getComputedStyle(el).backgroundColor;
-                if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
-                    const [r, g, b] = bg.match(/\d+/g).map(Number);
-                    const hex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b)
-                        .toString(16)
-                        .slice(1);
-                    el.setAttribute('data-bg-color', hex.toLowerCase());
-                }
-            } catch { }
+// --- SCAN & OBSERVE ---
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            observer.unobserve(entry.target);
+            processElement(entry.target);
         }
-    }
+    });
+}, { rootMargin: '0px 0px 300px 0px' });
 
-    /** Core Apply **/
-    function apply() {
-        const enabled = currentSettings.isEnabled !== false;
-        applyChromaKey();
+function scanPage() {
+    document.querySelectorAll('ytd-watch-flexy, ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer')
+        .forEach(el => observer.observe(el));
+}
 
-        if (enabled && !currentSettings.forceTransparent) {
-            requestIdleCallback(() => safeTagElements(document.body), { timeout: 500 });
-        }
-
-        if (!isTopFrame) return;
-        initContainer();
-
-        if (enabled) {
-            bgContainer.style.opacity = '1';
-            const imgSrc = currentSettings.imageUrl || currentSettings.imageDataUrl || '';
-
-            if (imgSrc && bgImage.src !== imgSrc) {
-                bgImage.style.opacity = '0';
-                setTimeout(() => {
-                    bgImage.src = imgSrc;
-                    bgImage.onload = () => {
-                        bgImage.style.opacity = '1';
-                    };
-                }, 100);
-            } else if (imgSrc) {
-                bgImage.style.opacity = '1';
-            } else {
-                bgImage.style.opacity = '0';
-            }
-
-            bgImage.style.filter = currentSettings.blurIntensity ? `blur(${currentSettings.blurIntensity}px)` : 'none';
-            bgOverlay.style.backgroundColor = currentSettings.dimColor === 'light' ? '#fff' : '#000';
-            bgOverlay.style.opacity = currentSettings.dimLevel ?? 0;
-        } else {
-            bgContainer.style.opacity = '0';
-        }
-    }
-
-    /** Observers **/
-    const debouncedApply = debounce(() => fetchSettings(apply), 300);
-
-    function observeMutations() {
-        const startObserving = () => {
-            const targetNode = document.body;
-            if (!targetNode) {
-                setTimeout(startObserving, 100);
-                return;
-            }
-
-            const observer = new MutationObserver(() => {
-                debouncedApply();
-            });
-
-            observer.observe(targetNode, { childList: true, subtree: true });
-            window.addEventListener('pagehide', () => observer.disconnect());
-        };
-        startObserving();
-    }
-
-    function hijackSPA() {
-        const trigger = () => setTimeout(() => fetchSettings(apply), 100);
-        const origPush = history.pushState;
-        const origReplace = history.replaceState;
-
-        history.pushState = function (...args) {
-            const res = origPush.apply(this, args);
-            trigger();
-            return res;
-        };
-        history.replaceState = function (...args) {
-            const res = origReplace.apply(this, args);
-            trigger();
-            return res;
-        };
-        window.addEventListener('popstate', trigger);
-    }
-
-    /** Initialize **/
-    function initialize() {
-        const initApply = () => fetchSettings(apply);
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApply);
-        } else {
-            initApply();
-        }
-
-        window.addEventListener('load', initApply);
-        setTimeout(initApply, 1000);
-
-        observeMutations();
-        hijackSPA();
-
-        setInterval(() => {
-            if (currentSettings.isEnabled && !currentSettings.forceTransparent) {
-                requestIdleCallback(() => safeTagElements(document.body), { timeout: 500 });
-            }
-        }, 1500);
-
-        if (chrome?.storage?.onChanged) {
-            chrome.storage.onChanged.addListener((changes, area) => {
-                if (area === 'local') debouncedApply();
-            });
-        }
-    }
-
-    /** Boot **/
-    initialize();
+// --- INIT ---
+(async function initialize() {
+    await loadAndMonitorSettings();
+    new MutationObserver(scanPage).observe(document.body, { childList: true, subtree: true });
+    scanPage();
+    console.log('✅ RatioMeter Hybrid Loaded');
 })();

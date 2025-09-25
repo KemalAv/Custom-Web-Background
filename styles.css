@@ -1,0 +1,60 @@
+/* --- 1. Base Badge Style (Common properties) --- */
+.tier-badge {
+    font-family: "YouTube Sans", "Roboto", sans-serif;
+    color: white;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 6px 10px;
+    line-height: 1.6;
+    width: fit-content;
+}
+
+/* --- NEW: Style for individual lines of data --- */
+.tier-data-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* --- NEW: Style for the labels (e.g., "Tier:") --- */
+.tier-label {
+    font-weight: bold;
+    opacity: 0.8;
+}
+
+/* --- 2. Layout-Specific Styles --- */
+#video-tier-bar-watch {
+    margin-top: 36px;
+}
+
+.video-tier-badge-thumbnail {
+    margin-top: 8px;
+    /* Adjust positioning on thumbnails if needed */
+}
+
+
+/* --- 3. Tier Colors (Only defines color and background) --- */
+/* TOP TIERS */
+.tier-x { background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff); color: #333; background-size: 200% 200%; animation: rainbow-animation 3s ease infinite; }
+@keyframes rainbow-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+.tier-sss { background-color: #fec4ff; color: #333; }
+.tier-ss-plus { background-color: #98fff6; color: #333; }
+.tier-perfect { background-color: #f0f0f0; color: #333; }
+
+/* STANDARD TIERS */
+.tier-ss { background-color: #00fbff; color: #333; }
+.tier-s-plus { background-color: #fcff98; color: #333; }
+.tier-s { background-color: #ffe600; color: #333; }
+.tier-a-plus { background-color: #00ef1c; }
+.tier-a { background-color: #00ce18; }
+.tier-a-minus { background-color: #00a713; }
+.tier-b-plus { background-color: #0400ec; }
+.tier-b { background-color: #0300a3; }
+.tier-b-minus { background-color: #0400ec; }
+.tier-c-plus { background-color: #f100f1; }
+.tier-c { background-color: #a400a4; }
+.tier-c-minus { background-color: #f100f1; }
+.tier-d-plus, .tier-d, .tier-d-minus { background-color: #ff0000; }
+.tier-e-plus, .tier-e, .tier-e-minus { background-color: #d10000; }
+.tier-f-plus, .tier-f, .tier-f-minus { background-color: #5c001f; }
+.tier-na { background-color: #7d7d7d; }
