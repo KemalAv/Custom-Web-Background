@@ -1,7 +1,7 @@
 # 🌫️ Custom Web Background - Custom Wallpapers with Blur & Dim for Any Website
 
 ✨ **Make every website aesthetic, personal, and yours.**
-GlassUI lets you add **custom wallpapers** with **glassmorphism blur and dim overlays** on *any* website: Google, YouTube, Reddit, you name it.
+GlassUI lets you add **custom wallpapers** with **glassmorphism blur and dim overlays** on *any* website: Google, YouTube, Reddit, etc...
 
 ---
 
@@ -29,3 +29,4 @@ GlassUI **does not collect any personal data**.
 We only use `storage` to save your local wallpaper, blur, and dim settings. So your vibe stays put!
 
 **No remote code, no tracking.**
+
