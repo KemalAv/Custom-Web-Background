@@ -1,71 +1,348 @@
+:root {
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --danger-color: #dc3545;
+    --bg-light: #f8f9fa;
+    --bg-medium: #e9ecef;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --border-color: #dee2e6;
+}
+
 body {
-    font-family: "Roboto", sans-serif;
-    width: 250px;
-    padding: 10px;
-    background-color: #f1f1f1;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    width: 340px;
+    padding: 16px;
+    background-color: var(--bg-light);
+    color: var(--text-primary);
+    font-size: 14px;
 }
 
 .container {
     display: flex;
     flex-direction: column;
+    gap: 20px;
 }
 
-h3 {
+header {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+header h3 {
     margin: 0 0 10px 0;
     text-align: center;
-    color: #333;
 }
 
-.setting {
+/* Toggle Switch */
+.toggle-switch {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    background-color: var(--bg-medium);
+    padding: 8px 12px;
+    border-radius: 8px;
 }
 
-.master-setting {
-    font-weight: bold;
-}
-
-hr {
-    border: none;
-    border-top: 1px solid #ccc;
-    margin: 5px 0 10px 0;
-}
-
-label {
-    margin-left: 8px;
-    font-size: 14px;
-    color: #555;
-}
-
-/* --- NEW STYLES FOR INFO SECTION --- */
-
-.info-section {
-    margin-top: 5px;
-    text-align: center;
-}
-
-.disclaimer {
-    font-size: 11px;
-    font-style: italic;
-    color: #666;
-    margin: 0 0 10px 0;
-    line-height: 1.4;
-}
-
-.support-link {
-    font-size: 12px;
-    color: #444;
-    margin: 0;
-    line-height: 1.5;
-}
-
-.support-link a {
-    color: #065fd4; /* Standard link blue */
-    text-decoration: none;
+.toggle-switch label {
     font-weight: 500;
 }
 
-.support-link a:hover {
+input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+/* Main Settings Panel */
+#settings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    transition: opacity 0.3s, filter 0.3s;
+}
+
+#settings-panel.disabled {
+    opacity: 0.4;
+    filter: grayscale(50%);
+    pointer-events: none;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Buttons */
+button {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.button-primary {
+    background: linear-gradient(135deg, var(--primary-color), #0056b3);
+    color: white;
+    width: 100%;
+}
+
+.button-primary:hover {
+    background: linear-gradient(135deg, #0084ff, #0056b3);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.button-secondary {
+    background-color: var(--bg-medium);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.button-secondary:hover {
+    background-color: #e2e6ea;
+    border-color: #adb5bd;
+}
+
+.button-secondary:disabled {
+    background-color: #f1f3f5;
+    color: #adb5bd;
+    cursor: not-allowed;
+}
+
+/* Inputs & Sliders */
+input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+}
+
+.radio-group {
+    display: flex;
+    gap: 10px;
+    background-color: var(--bg-medium);
+    padding: 8px;
+    border-radius: 6px;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+#currentImageName {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-style: italic;
+}
+
+/* Footer & Status */
+footer {
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+}
+
+#status {
+    text-align: center;
+    font-size: 12px;
+    color: green;
+    min-height: 18px;
+    margin-top: 8px;
+}
+
+.donate-link {
+    font-size: 0.85rem;
+    text-align: center;
+    margin-top: 8px;
+    color: #555;
+}
+
+.donate-link a {
+    color: #0077cc;
+    text-decoration: none;
+}
+
+.donate-link a:hover {
     text-decoration: underline;
+}
+
+/* === Glass UI Styles === */
+.glass-ui {
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Light variant */
+.glass-ui.light {
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #212529;
+}
+
+/* Dark variant */
+.glass-ui.dark {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f1f1f1;
+}
+
+/* === Spinner === */
+.spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* === UI Animations === */
+
+body.animations-enabled .form-group {
+    animation: fadeInUp 0.4s ease forwards;
+    opacity: 0;
+}
+
+body.animations-enabled .form-group:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+body.animations-enabled .form-group:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+body.animations-enabled .form-group:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+body.animations-enabled .form-group:nth-child(4) {
+    animation-delay: 0.25s;
+}
+
+body.animations-enabled .form-group:nth-child(5) {
+    animation-delay: 0.3s;
+}
+
+body.animations-enabled .form-group:nth-child(6) {
+    animation-delay: 0.35s;
+}
+
+body.animations-enabled .form-group:nth-child(7) {
+    animation-delay: 0.4s;
+}
+
+body.animations-enabled .form-group:nth-child(8) {
+    animation-delay: 0.45s;
+}
+
+body.animations-enabled button {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.animations-enabled button:hover {
+    transform: translateY(-2px) scale(1.02);
+}
+
+body.animations-enabled button:active {
+    transform: translateY(0) scale(0.96);
+}
+
+/* Button Shine Effect */
+body.animations-enabled button::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(30deg);
+    transition: none;
+}
+
+body.animations-enabled button:hover::after {
+    left: 120%;
+    transition: left 0.6s ease-in-out;
+}
+
+body.animations-enabled .button-primary:hover {
+    box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
+}
+
+body.animations-enabled input[type="range"]::-webkit-slider-thumb {
+    transition: transform 0.2s ease;
+}
+
+body.animations-enabled input[type="range"]:hover::-webkit-slider-thumb {
+    transform: scale(1.2);
+}
+
+body.animations-enabled .radio-group label input[type="radio"] {
+    transition: transform 0.2s ease;
+}
+
+body.animations-enabled .radio-group label:hover input[type="radio"] {
+    transform: scale(1.1);
+}
+
+body.animations-enabled .toggle-switch {
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.animations-enabled .toggle-switch:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Make inputs have a little smooth outline transition */
+body.animations-enabled input[type="url"],
+body.animations-enabled input[type="file"] {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+body.animations-enabled input[type="url"]:focus {
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    border-color: var(--primary-color);
+    outline: none;
 }

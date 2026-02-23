@@ -1,34 +1,32 @@
 {
   "manifest_version": 3,
-  "name": "RatioMeter for YouTube",
-  "version": "1.1",
-  "description": "Displays a tier rating for YouTube videos based on their like/dislike ratio.",
+  "name": "Custom Web Background",
+  "version": "3.59",
+  "description": "Tired of boring plain pages? This extension lets you add your own wallpaper behind every website you visit.",
+  "permissions": [
+    "storage",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
   "icons": {
     "128": "icons/icon128.png"
   },
-  "permissions": [
-    "storage"
-  ],
-  "host_permissions": [
-    "https://returnyoutubedislikeapi.com/*"
-  ],
   "content_scripts": [
     {
       "matches": [
-        "https://www.youtube.com/*"
+        "<all_urls>"
       ],
       "js": [
         "content.js"
       ],
-      "css": [
-        "styles.css"
-      ]
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
     }
-  ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "128": "icons/icon128.png"
-    }
-  }
+  ]
 }
