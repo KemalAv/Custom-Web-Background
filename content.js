@@ -455,11 +455,19 @@
                     return;
                 }
 
-                // Rule 3: Perilaku Light Mode (Dim Color: White) -> Jangan ubah warna teks bawaan
+                // Rule 3: Perilaku Light Mode (Dim Color: White)
                 if (dimColor === 'light') {
-                    if (el.hasAttribute('data-glass-color')) {
-                        el.style.removeProperty('color');
-                        el.removeAttribute('data-glass-color');
+                    // Paksa teks ke hitam kecuali jika di atas background yang lumayan gelap
+                    if (isOpaque && bgLuminance < 0.5) {
+                        if (el.hasAttribute('data-glass-color')) {
+                            el.style.removeProperty('color');
+                            el.removeAttribute('data-glass-color');
+                        }
+                    } else {
+                        if (el.getAttribute('data-glass-color') !== 'black') {
+                            el.style.setProperty('color', 'black', 'important');
+                            el.setAttribute('data-glass-color', 'black');
+                        }
                     }
                     return;
                 }
