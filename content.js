@@ -27,6 +27,8 @@
                 currentSettings.isEnabled = currentSettings.isEnabled ?? true;
                 currentSettings.uiMode = currentSettings.uiMode || 'chroma';
                 currentSettings.protectModals = currentSettings.protectModals ?? false;
+                currentSettings.autoTextColor = currentSettings.autoTextColor ?? false;
+                currentSettings.animationsEnabled = currentSettings.animationsEnabled ?? false;
                 callback?.();
             });
         } catch (e) { console.error(e); }
@@ -82,25 +84,13 @@
                 transition: 'opacity 0.5s ease',
             });
 
-            bgVideo = document.createElement('video');
-            Object.assign(bgVideo.style, {
-                position: 'absolute', inset: 0,
-                width: '100%', height: '100%',
-                objectFit: 'cover', opacity: 0,
-                transition: 'opacity 0.5s ease',
-            });
-            bgVideo.autoplay = true;
-            bgVideo.loop = true;
-            bgVideo.muted = true;
-            bgVideo.playsInline = true;
-
             bgOverlay = document.createElement('div');
             Object.assign(bgOverlay.style, {
                 position: 'absolute', inset: 0,
                 opacity: 0, transition: 'opacity 0.5s ease',
             });
 
-            bgContainer.append(bgVideo, bgImage, bgOverlay);
+            bgContainer.append(bgImage, bgOverlay);
         }
 
         if (!document.documentElement.contains(bgContainer)) {
@@ -144,7 +134,7 @@
                     position: fixed; top: 20px; right: 20px; width: 24px; height: 24px;
                     border: 3px solid rgba(0,0,0,0.1); border-radius: 50%;
                     border-top-color: #007bff; animation: bg-spin 1s linear infinite;
-                    z-index: 2147483647; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+                    z-index: 2147483647; pointer-events: none; opacity: 0; transition: opacity 0.2s;
                 }
                 .universal-spinner.visible { opacity: 1; }
                 @keyframes bg-spin { to { transform: rotate(360deg); } }
@@ -163,7 +153,6 @@
             if (clearMedia) {
                 bgContainer.style.opacity = '0';
                 if (bgImage) bgImage.src = '';
-                if (bgVideo) bgVideo.src = '';
                 lastLoadedSrc = '';
                 lastLoadedName = '';
                 lastLoadedLength = 0;
@@ -176,6 +165,7 @@
         if (pageSpinner) pageSpinner.classList.remove('visible');
         document.querySelectorAll('*').forEach(el => {
             el.removeAttribute('data-bg-color');
+            el.removeAttribute(SAFE_ATTR);
             if (el.hasAttribute('data-glass-color')) {
                 el.style.removeProperty('color');
                 el.removeAttribute('data-glass-color');
@@ -208,18 +198,18 @@
         button:active, .btn:active, .button:active, [role="button"]:active,
         input[type="submit"]:active, input[type="button"]:active,
         [role="tab"]:active, [role="link"]:active, a:active, summary:active {
-            transform: translateY(0) scale(0.96) !important;
             filter: brightness(0.9) !important;
         }
         ` : '';
 
         const popupAnim = currentSettings.animationsEnabled ? `
         @keyframes slideInUp {
-            from { opacity: 0; transform: translateY(20px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         [role="dialog"], [role="menu"], .popup, .modal, .dropdown, .overlay, [aria-modal="true"] {
-            animation: slideInUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+            /* Use only opacity animation to prevent layout/position shifts */
+            animation: slideInUp 0.2s ease-out forwards !important;
         }
         ` : '';
 
@@ -321,15 +311,56 @@
     }
 
     function markSafeElements() {
-        // YouTube & Common Heavy Re-renderers
-        document.querySelectorAll('#masthead-container, ytd-masthead, #search, ytd-searchbox, #guide, ytd-guide-renderer, #sections, #contents a, tp-yt-paper-item, #end, .ytp-chrome-top, .ytp-chrome-bottom')
+        // 1. Static Rules (High-level containers)
+        document.querySelectorAll('#masthead-container, ytd-masthead, #search, ytd-searchbox, #guide, ytd-guide-renderer, #sections, #contents a, tp-yt-paper-item, #end, .ytp-chrome-top, .ytp-chrome-bottom, #searchform, #gb, #hplogo, .gb_uc, .top-bar')
             .forEach(el => el.setAttribute(SAFE_ATTR, 'true'));
-        // Google
-        document.querySelectorAll('#searchform, #gb, #hplogo, .gb_uc, .top-bar')
-            .forEach(el => el.setAttribute(SAFE_ATTR, 'true'));
-        // Universal & Common UI + Aggressive Popup/Portal Selectors
+
+        // 2. Functional Rules (Buttons, inputs, etc)
         document.querySelectorAll('header, nav, footer, button, [type="submit"], [role="button"], [role="menu"], [role="dialog"], [role="alert"], [role="status"], [role="tooltip"], [role="banner"], [role="navigation"], input, select, textarea, a, [onclick], [tabindex], .btn, .button, .badge, .label, .tag, .toast, .alert, .modal, .popup, .dropdown, .card-header, .card-footer, img, video, svg, canvas, iframe, .swal2-container, .swal-overlay, .modal-backdrop, .MuiDialog-root, .MuiPopover-root, .MuiMenu-root, .flatpickr-calendar, .ui-datepicker, .select2-container, [id*="portal"], [id*="popper"], [class*="portal"], [class*="popper"], [data-radix-portal], [data-headlessui-portal]')
             .forEach(el => el.setAttribute(SAFE_ATTR, 'true'));
+
+        // 3. Dynamic UI Protection (Strict Check)
+        const protectModals = currentSettings.protectModals ?? false;
+        const uiKeywords = ['modal', 'popup', 'dialog', 'swal', 'portal', 'popper', 'wrapper', 'banner', 'tooltip', 'notify', 'alert', 'layer', 'panel', 'overlay', 'mask', 'drawer'];
+
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
+            acceptNode(node) {
+                if (node.hasAttribute(SAFE_ATTR)) return NodeFilter.FILTER_SKIP;
+                
+                // Small elements (icons, badges, etc) should never be transparent/glass
+                if (node.offsetWidth > 0 && node.offsetHeight > 0 && (node.offsetWidth < 32 || node.offsetHeight < 32)) {
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+
+                if (protectModals) {
+                    try {
+                        const style = window.getComputedStyle(node);
+                        const pos = style.position;
+                        const z = style.zIndex;
+
+                        // Position check
+                        if (pos === 'fixed' || pos === 'sticky' || pos === 'absolute') return NodeFilter.FILTER_ACCEPT;
+                        // Z-Index check
+                        if (z !== 'auto' && parseInt(z) > 1) return NodeFilter.FILTER_ACCEPT;
+
+                        // Keyword check
+                        const id = node.id?.toLowerCase() || '';
+                        const className = (typeof node.className === 'string' ? node.className : '').toLowerCase();
+                        if (uiKeywords.some(key => id.includes(key) || className.includes(key))) return NodeFilter.FILTER_ACCEPT;
+
+                        // Portal check
+                        if (node.hasAttribute('data-radix-portal') || node.hasAttribute('data-headlessui-portal') || node.hasAttribute('aria-haspopup')) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    } catch (e) { }
+                }
+                return NodeFilter.FILTER_SKIP;
+            }
+        });
+
+        while (walker.nextNode()) {
+            walker.currentNode.setAttribute(SAFE_ATTR, 'true');
+        }
     }
 
     /** ==================== GLASS MODE ==================== */
@@ -339,7 +370,102 @@
         const min = Math.min(r, g, b);
         const delta = max - min;
         const saturation = max === 0 ? 0 : delta / max;
-        return saturation < 0.5; // threshold netral (increased for tinted dark modes)
+        return saturation < 0.2; // threshold netral (lebih ketat agar tidak mewarnai teks berwarna)
+    }
+
+    function getEffectiveBackgroundColor(el) {
+        let current = el;
+        while (current && current !== document.body) {
+            try {
+                const style = getComputedStyle(current);
+                const bg = style.backgroundColor;
+                if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+                    const rgba = bg.match(/[\d.]+/g)?.map(Number);
+                    if (rgba && (rgba.length < 4 || rgba[3] > 0.5)) {
+                        return rgba;
+                    }
+                }
+            } catch (e) { }
+            current = current.parentElement;
+        }
+        return null;
+    }
+
+    function applyTextColorCorrection() {
+        if (!currentSettings.autoTextColor) {
+            // Cleanup if disabled
+            document.querySelectorAll('[data-glass-color]').forEach(el => {
+                el.style.removeProperty('color');
+                el.removeAttribute('data-glass-color');
+            });
+            return;
+        }
+
+        const dimColor = currentSettings.dimColor || 'dark';
+
+        document.querySelectorAll(`body *:not(img):not(video):not(svg):not(iframe):not(canvas)`).forEach(el => {
+            try {
+                // Lewati jika hanya container gambar/video/kosong
+                if (el.children.length === 0 && !el.textContent.trim()) return;
+
+                const style = getComputedStyle(el);
+                const currentColor = style.color;
+                const rgb = currentColor.match(/\d+/g)?.map(Number);
+                if (!rgb || rgb.length < 3) return;
+
+                // Hanya proses teks yang berwarna netral (putih, hitam, abu-abu)
+                if (!isNeutralColor(rgb)) return;
+
+                const bgRgba = getEffectiveBackgroundColor(el);
+                let bgLuminance = 1; // Default ke terang (putih)
+                let isOpaque = false;
+
+                if (bgRgba) {
+                    const bgAlpha = bgRgba.length === 4 ? bgRgba[3] : 1;
+                    if (bgAlpha > 0.5) {
+                        isOpaque = true;
+                        const [br, bg_g, bb] = bgRgba;
+                        bgLuminance = (0.299 * br + 0.587 * bg_g + 0.114 * bb) / 255;
+                    }
+                }
+
+                // Rule 1: Teks pada icon/background GELAP harus PUTIH (untuk kontras)
+                if (isOpaque && bgLuminance < 0.35) {
+                    if (el.getAttribute('data-glass-color') !== 'white') {
+                        el.style.setProperty('color', 'white', 'important');
+                        el.setAttribute('data-glass-color', 'white');
+                    }
+                    return;
+                }
+
+                // Rule 2: Perilaku Dark Mode (Dim Color: Black)
+                if (dimColor === 'dark') {
+                    // Paksa teks ke putih kecuali jika di atas background yang sudah terang
+                    if (isOpaque && bgLuminance > 0.65) {
+                        if (el.hasAttribute('data-glass-color')) {
+                            el.style.removeProperty('color');
+                            el.removeAttribute('data-glass-color');
+                        }
+                    } else {
+                        if (el.getAttribute('data-glass-color') !== 'white') {
+                            el.style.setProperty('color', 'white', 'important');
+                            el.setAttribute('data-glass-color', 'white');
+                        }
+                    }
+                    return;
+                }
+
+                // Rule 3: Perilaku Light Mode (Dim Color: White) -> Jangan ubah warna teks bawaan
+                if (dimColor === 'light') {
+                    if (el.hasAttribute('data-glass-color')) {
+                        el.style.removeProperty('color');
+                        el.removeAttribute('data-glass-color');
+                    }
+                    return;
+                }
+
+            } catch { }
+        });
     }
 
     function applyGlassStep() {
@@ -365,18 +491,17 @@
             button:active, .btn:active, .button:active, [role="button"]:active,
             input[type="submit"]:active, input[type="button"]:active,
             [role="tab"]:active, [role="link"]:active, a:active, summary:active {
-                transform: translateY(0) scale(0.96) !important;
                 filter: brightness(0.9) !important;
             }
         ` : '';
 
         const popupAnim = currentSettings.animationsEnabled ? `
             @keyframes slideInUp {
-                from { opacity: 0; transform: translateY(20px) scale(0.95); }
-                to { opacity: 1; transform: translateY(0) scale(1); }
+                from { opacity: 0; }
+                to { opacity: 1; }
             }
             [role="dialog"], [role="menu"], .popup, .modal, .dropdown, .overlay, [aria-modal="true"] {
-                animation: slideInUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+                animation: slideInUp 0.2s ease-out forwards !important;
             }
         ` : '';
 
@@ -387,34 +512,21 @@
                 border-radius: 12px !important; 
             }
             body { border-radius: 0 !important; }
+
+            /* Protected Elements override (only if not already glass) */
+            [${SAFE_ATTR}] {
+                backdrop-filter: none !important;
+            }
+
             [role="dialog"], [role="menu"], .popup, .modal, .dropdown, .overlay, [aria-modal="true"] {
-                background-color: ${bgColor} !important;
-                backdrop-filter: blur(${blurIntensity}px) !important;
+                ${currentSettings.protectModals ? '' : `
+                    background-color: ${bgColor} !important;
+                    backdrop-filter: blur(${blurIntensity}px) !important;
+                `}
             }
             ${animStyles}
             ${popupAnim}
         `;
-
-        const targetColor = dimColor === 'dark' ? 'white' : 'black';
-        document.querySelectorAll(`body *:not(img):not(video):not(svg):not(iframe):not(canvas)`).forEach(el => {
-            try {
-                // Skip if purely a container for images/videos
-                if (el.children.length === 0 && !el.textContent.trim()) return;
-
-                // Color switching is still needed even for "safe" elements if they contain neutral text
-                // because the glass background applies to everything behind them.
-                if (el.getAttribute('data-glass-color') === targetColor) return;
-
-                const c = getComputedStyle(el).color;
-                const rgb = c.match(/\d+/g)?.map(Number);
-                if (!rgb || rgb.length < 3) return;
-
-                if (isNeutralColor(rgb)) {
-                    el.style.setProperty('color', targetColor, 'important');
-                    el.setAttribute('data-glass-color', targetColor);
-                }
-            } catch { }
-        });
     }
 
     /** ==================== APPLY ==================== */
@@ -439,6 +551,8 @@
             safeTagElements(document.body);
         }
 
+        applyTextColorCorrection();
+
         lastMode = currentSettings.uiMode;
 
         if (!isTopFrame) return;
@@ -450,10 +564,7 @@
         bgContainer.style.opacity = '1';
 
         if (imgSrc) {
-            const isVideo = imgSrc.startsWith('data:video') || imgSrc.toLowerCase().endsWith('.mp4');
-            const isHeavy = isVideo || imgLen > 10000000;
-
-            // Efficient check if source changed: length + name is usually enough to avoid expensive string compares
+            const isHeavy = imgLen > 10000000;
             const hasChanged = (imgLen !== lastLoadedLength) || (imgName !== lastLoadedName);
 
             if (hasChanged) {
@@ -469,94 +580,69 @@
                         if (pendingHeavyLoad && loadSessionId === currentSession) {
                             pendingHeavyLoad = false;
                             if (pageSpinner) pageSpinner.classList.remove('visible');
-                            apply(false); // Don't force reset, just update
+                            apply(false);
                         }
-                    }, 3000); // 3s fallback
+                    }, 3000);
                 } else {
                     pendingHeavyLoad = false;
                 }
 
-                // Create Blob URL for media
                 if (currentBlobUrl) {
                     URL.revokeObjectURL(currentBlobUrl);
                     currentBlobUrl = null;
                 }
                 const playbackSrc = imgSrc.startsWith('data:') ? (currentBlobUrl = dataUrlToBlobUrl(imgSrc)) : imgSrc;
 
-                if (isVideo) {
-                    bgImage.style.opacity = '0';
-                    bgVideo.onerror = () => {
-                        if (loadSessionId === currentSession) {
-                            pendingHeavyLoad = false;
-                            pageSpinner?.classList.remove('visible');
-                            lastLoadedLength = 0;
-                            lastLoadedName = '';
-                        }
-                    };
-                    bgVideo.onloadeddata = () => {
-                        if (loadSessionId === currentSession) {
-                            lastLoadedSrc = imgSrc;
-                            pendingHeavyLoad = false;
-                            if (pageSpinner) pageSpinner.classList.remove('visible');
-                            clearTimeout(pendingLoadTimer);
-                            bgVideo.style.opacity = '1';
-                        }
-                    };
-                    bgVideo.src = playbackSrc;
-                    bgVideo.play().catch(() => { });
-                } else {
-                    bgVideo.style.opacity = '0';
-                    bgImage.onerror = () => {
-                        if (loadSessionId === currentSession) {
-                            pendingHeavyLoad = false;
-                            pageSpinner?.classList.remove('visible');
-                            lastLoadedLength = 0;
-                            lastLoadedName = '';
-                        }
-                    };
-                    bgImage.onload = () => {
-                        if (loadSessionId === currentSession) {
-                            lastLoadedSrc = imgSrc;
-                            pendingHeavyLoad = false;
-                            if (pageSpinner) pageSpinner.classList.remove('visible');
-                            clearTimeout(pendingLoadTimer);
-                            bgImage.style.opacity = '1';
-                        }
-                    };
-                    bgImage.src = playbackSrc;
-                }
+                bgImage.onerror = () => {
+                    if (loadSessionId === currentSession) {
+                        pendingHeavyLoad = false;
+                        pageSpinner?.classList.remove('visible');
+                        lastLoadedLength = 0;
+                        lastLoadedName = '';
+                    }
+                };
+                bgImage.onload = () => {
+                    if (loadSessionId === currentSession) {
+                        lastLoadedSrc = imgSrc;
+                        pendingHeavyLoad = false;
+                        if (pageSpinner) pageSpinner.classList.remove('visible');
+                        clearTimeout(pendingLoadTimer);
+                        bgImage.style.opacity = '1';
+                    }
+                };
+                bgImage.src = playbackSrc;
             } else if (!pendingHeavyLoad) {
-                // Already loaded or light file
-                if (isVideo) {
-                    bgVideo.style.opacity = '1';
-                } else {
-                    bgImage.style.opacity = '1';
-                }
+                bgImage.style.opacity = '1';
             }
         }
 
         const blurFilter = currentSettings.blurIntensity ? `blur(${currentSettings.blurIntensity}px)` : 'none';
         if (bgImage) bgImage.style.filter = blurFilter;
-        if (bgVideo) bgVideo.style.filter = blurFilter;
-        bgOverlay.style.backgroundColor = currentSettings.dimColor === 'light' ? '#fff' : '#000';
-        bgOverlay.style.opacity = currentSettings.dimLevel ?? 0;
+        if (bgOverlay) {
+            bgOverlay.style.backgroundColor = currentSettings.dimColor === 'light' ? '#fff' : '#000';
+            bgOverlay.style.opacity = currentSettings.dimLevel ?? 0;
+        }
     }
 
     /** ==================== OBSERVER ==================== */
     const debouncedApply = debounce(() => {
         if (!currentSettings.isEnabled) return;
+        
+        // Always refresh safe tags first to ensure persistence
+        markSafeElements();
+
         if (currentSettings.uiMode === 'glass') {
             applyGlassStep();
         } else {
-            markSafeElements();
             safeTagElements(document.body);
         }
+
+        applyTextColorCorrection();
     }, 250);
 
     function observeDOM() {
         if (mutationObserver) mutationObserver.disconnect();
 
-        // Safety check for body
         if (!document.body) {
             setTimeout(observeDOM, 100);
             return;
@@ -565,14 +651,22 @@
         mutationObserver = new MutationObserver((mutations) => {
             if (!currentSettings.isEnabled) return;
 
-            // Loop prevention: check if mutations are actually from the site
             let shouldUpdate = false;
             for (let mutation of mutations) {
+                // Ignore mutations on our own container or styles
+                if (mutation.target.id === BG_CONTAINER_ID || 
+                    mutation.target.id === STYLE_TAG_ID || 
+                    mutation.target.id === GLASS_STYLE_ID) continue;
+
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    shouldUpdate = true; break;
+                    // Check if added nodes aren't just our own spinner
+                    const realNodes = Array.from(mutation.addedNodes).some(node => 
+                        node.nodeType === 1 && !node.classList?.contains('universal-spinner')
+                    );
+                    if (realNodes) { shouldUpdate = true; break; }
                 }
+                
                 if (mutation.type === 'attributes') {
-                    // Ignore our own changes to prevent infinite loops (especially in Chroma mode)
                     if (mutation.attributeName === 'data-glass-color' ||
                         mutation.attributeName === 'data-bg-color' ||
                         mutation.attributeName === SAFE_ATTR) continue;
@@ -584,10 +678,51 @@
                 debouncedApply();
             }
         });
-        mutationObserver.observe(document.body, {
-            childList: true, subtree: true,
-            attributes: true, attributeFilter: ["class", "style"]
+        
+        mutationObserver.observe(document.documentElement, {
+            childList: true, 
+            subtree: true,
+            attributes: true, 
+            attributeFilter: ["class", "style", "id"]
         });
+    }
+
+    /** ==================== PERSISTENCE PULSE ==================== */
+    // Websites like YouTube/Gmail often nuke or override styles. 
+    // This "pulse" ensures our critical elements stay alive and at the correct positions.
+    function startPersistencePulse() {
+        setInterval(() => {
+            if (!currentSettings.isEnabled) return;
+
+            // 1. Ensure Container & Styles are still in DOM and correctly placed
+            initStyleTags();
+            if (isTopFrame) {
+                initContainer();
+                if (bgContainer && bgContainer.style.opacity === '0' && currentSettings.isEnabled) {
+                    bgContainer.style.opacity = '1';
+                }
+            }
+
+            // 2. Secondary check for text colors (especially for SPAs)
+            // We don't do a full 'apply(true)' to avoid flicker, just a refresh
+            if (currentSettings.uiMode === 'glass') {
+                applyGlassStep();
+            } else {
+                markSafeElements();
+                safeTagElements(document.body);
+            }
+
+            applyTextColorCorrection();
+        }, 3000); // Pulse every 3 seconds
+
+        // URL Change detection for SPAs that don't trigger pushState correctly
+        let lastUrl = location.href;
+        setInterval(() => {
+            if (location.href !== lastUrl) {
+                lastUrl = location.href;
+                setTimeout(() => fetchSettings(() => apply(true)), 500);
+            }
+        }, 1000);
     }
 
     /** ==================== INIT ==================== */
@@ -604,22 +739,19 @@
         }
 
         observeDOM();
+        startPersistencePulse();
 
         ['pushState', 'replaceState'].forEach(fn => {
             const orig = history[fn];
             history[fn] = function (...args) {
                 const res = orig.apply(this, args);
-                if (currentSettings.uiMode === 'glass') {
-                    setTimeout(() => fetchSettings(() => apply(true)), 150);
-                }
+                setTimeout(() => fetchSettings(() => apply(true)), 200);
                 return res;
             };
         });
 
         window.addEventListener('popstate', () => {
-            if (currentSettings.uiMode === 'glass') {
-                setTimeout(() => fetchSettings(() => apply(true)), 150);
-            }
+            setTimeout(() => fetchSettings(() => apply(true)), 200);
         });
     }
 

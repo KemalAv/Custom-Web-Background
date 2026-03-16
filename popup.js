@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const enabledCheckbox = document.getElementById('enabledCheckbox');
     const animationsCheckbox = document.getElementById('animationsCheckbox');
     const protectModalsCheckbox = document.getElementById('protectModalsCheckbox');
+    const autoTextColorCheckbox = document.getElementById('autoTextColorCheckbox');
     const protectModalsSection = document.getElementById('protectModalsSection');
     const settingsPanel = document.getElementById('settings-panel');
     const imageUploadInput = document.getElementById('imageUpload');
@@ -25,12 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadSettings = () => {
         const defaults = {
             isEnabled: true,
-            animationsEnabled: true,
+            animationsEnabled: false,
             protectModals: false,
+            autoTextColor: false,
             uiMode: 'chroma', // New setting
             imageName: 'Using default image.',
             imageDataUrl: null,
-            imageUrl: '',
+            imageUrl: 'https://images2.alphacoders.com/137/1375140.png',
             dimLevel: 0,
             dimColor: 'dark',
             blurIntensity: 0
@@ -40,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             enabledCheckbox.checked = settings.isEnabled;
             animationsCheckbox.checked = settings.animationsEnabled;
             protectModalsCheckbox.checked = settings.protectModals;
+            autoTextColorCheckbox.checked = settings.autoTextColor;
             dimLevelInput.value = settings.dimLevel;
             blurSlider.value = settings.blurIntensity;
             imageUrlInput.value = settings.imageUrl || '';
@@ -56,6 +59,15 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleSettingsPanel();
             toggleAnimations();
             toggleProtectModalsVisibility();
+
+            // Auto apply default URL if set and no uploaded image
+            if (settings.imageUrl && !settings.imageDataUrl) {
+                chrome.storage.local.set({
+                    imageUrl: settings.imageUrl,
+                    imageDataUrl: null,
+                    imageName: settings.imageName || 'From URL'
+                });
+            }
         });
     };
 
@@ -67,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isEnabled: enabledCheckbox.checked,
             animationsEnabled: animationsCheckbox.checked,
             protectModals: protectModalsCheckbox.checked,
+            autoTextColor: autoTextColorCheckbox.checked,
             uiMode: document.querySelector('input[name="uiMode"]:checked').value, // New setting
             dimLevel: dimLevelInput.value,
             blurIntensity: blurSlider.value,
@@ -142,8 +155,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * Toggle Protect Modals section visibility based on UI mode.
      */
     const toggleProtectModalsVisibility = () => {
-        const uiMode = document.querySelector('input[name="uiMode"]:checked').value;
-        protectModalsSection.style.display = uiMode === 'chroma' ? 'flex' : 'none';
+        // Protect Modals is now supported in both Chroma and Glass modes
+        protectModalsSection.style.display = 'flex';
     };
 
     /**

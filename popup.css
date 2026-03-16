@@ -62,7 +62,7 @@ input[type="checkbox"] {
     display: flex;
     flex-direction: column;
     gap: 18px;
-    transition: opacity 0.3s, filter 0.3s;
+    transition: opacity 0.25s, filter 0.25s;
 }
 
 #settings-panel.disabled {
@@ -85,7 +85,7 @@ button {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
     display: inline-flex;
@@ -240,7 +240,7 @@ footer {
 /* === UI Animations === */
 
 body.animations-enabled .form-group {
-    animation: fadeInUp 0.4s ease forwards;
+    animation: fadeInUp 0.25s ease forwards;
     opacity: 0;
 }
 
@@ -327,7 +327,7 @@ body.animations-enabled .radio-group label:hover input[type="radio"] {
 }
 
 body.animations-enabled .toggle-switch {
-    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    transition: background-color 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 body.animations-enabled .toggle-switch:hover {
@@ -338,7 +338,7 @@ body.animations-enabled .toggle-switch:hover {
 /* Make inputs have a little smooth outline transition */
 body.animations-enabled input[type="url"],
 body.animations-enabled input[type="file"] {
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 body.animations-enabled input[type="url"]:focus {

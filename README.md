@@ -30,5 +30,3 @@ We only use `storage` to save your local wallpaper, blur, and dim settings. So y
 
 **No remote code, no tracking.**
 
-https://chromewebstore.google.com/detail/khcclkconpfiinfefklbgiadmboljdga?utm_source=item-share-cb
-

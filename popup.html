@@ -13,7 +13,7 @@
             <h3>Custom Web Background</h3>
             <div class="toggle-switch">
                 <label for="enabledCheckbox">Enable Extension</label>
-                <input type="checkbox" id="enabledCheckbox">
+                <input type="checkbox" id="enabledCheckbox" checked>
             </div>
         </header>
 
@@ -34,6 +34,13 @@
             </section>
 
             <section class="form-group">
+                <div class="toggle-switch">
+                    <label for="autoTextColorCheckbox" style="font-weight: normal;">Auto Correct Text Color</label>
+                    <input type="checkbox" id="autoTextColorCheckbox" checked>
+                </div>
+            </section>
+
+            <section class="form-group">
                 <label>UI Mode:</label>
                 <div class="radio-group" id="uiModeGroup">
                     <label><input type="radio" name="uiMode" value="chroma" checked> Chroma Key (Default)</label>
@@ -42,15 +49,19 @@
             </section>
 
             <section class="form-group">
-                <label>Background Media (JPG, PNG, GIF, MP4)</label>
-                <input type="file" id="imageUpload" accept="image/*,video/mp4" hidden>
+                <label>Background Media (JPG, PNG, GIF)</label>
+                <div class="video-note" style="font-size: 11px; margin-bottom: 6px; color: #666;">
+                    Video background? Convert your MP4 to GIF here: 
+                    <a href="https://ezgif.com/video-to-gif" target="_blank" style="color: var(--primary-color);">ezgif.com</a>
+                </div>
+                <input type="file" id="imageUpload" accept="image/jpeg,image/png,image/gif" hidden>
                 <button id="uploadButton" class="button-secondary">Choose File...</button>
                 <span id="currentImageName">Using default image.</span>
             </section>
 
             <section class="form-group">
                 <label>Or Enter Media URL</label>
-                <input type="url" id="imageUrlInput" placeholder="https://example.com/image.jpg"
+                <input type="url" id="imageUrlInput" placeholder="icon/wallpaper.jpg"
                     style="width: 100%; margin-top: 6px; padding: 6px;">
                 <button id="applyUrlButton" class="button-secondary" style="margin-top: 6px;">Apply URL</button>
             </section>
@@ -80,8 +91,8 @@
             <div id="status"></div>
             <p class="donate-link">
                 Gimmie your money please:
-                <a href="https://ko-fi.com/kemalavicennafaza" target="_blank" rel="noopener noreferrer">
-                    ko-fi.com/kemalavicennafaza
+                <a href="https://sociabuzz.com/kemalavicennafaza" target="_blank" rel="noopener noreferrer">
+                    sociabuzz.com/kemalavicennafaza
                 </a>
             </p>
         </footer>
