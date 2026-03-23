@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Custom Web Background",
-  "version": "3.62",
+  "version": "3.63",
   "description": "Tired of boring plain pages? This extension lets you add your own wallpaper behind every website you visit.",
   "permissions": [
     "storage",
@@ -27,6 +27,17 @@
       "run_at": "document_start",
       "all_frames": true,
       "match_about_blank": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "video-bg.html",
+        "video-bg.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

@@ -77,6 +77,17 @@ input[type="checkbox"] {
     gap: 8px;
 }
 
+.sub-option {
+    margin-left: 12px;
+    padding-left: 10px;
+    border-left: 2px solid var(--primary-color);
+}
+
+.sub-toggle {
+    padding: 6px 10px;
+    background-color: rgba(0, 123, 255, 0.06);
+}
+
 /* Buttons */
 button {
     border: none;

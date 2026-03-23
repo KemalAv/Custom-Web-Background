@@ -38,6 +38,13 @@
                     <label for="autoTextColorCheckbox" style="font-weight: normal;">Auto Correct Text Color</label>
                     <input type="checkbox" id="autoTextColorCheckbox" checked>
                 </div>
+                <div class="sub-option" id="ignoreElementBgSection" style="display: none;">
+                    <div class="toggle-switch sub-toggle">
+                        <label for="ignoreElementBgCheckbox" style="font-weight: normal; font-size: 12px;">Ignore Element Background</label>
+                        <input type="checkbox" id="ignoreElementBgCheckbox">
+                    </div>
+                    <div style="font-size: 11px; color: #888; margin-top: 2px; padding-left: 4px;">When ON, text color always follows dim overlay mode, ignoring dark/light element backgrounds.</div>
+                </div>
             </section>
 
             <section class="form-group">
@@ -49,12 +56,11 @@
             </section>
 
             <section class="form-group">
-                <label>Background Media (JPG, PNG, GIF)</label>
+                <label>Background Media (JPG, PNG, GIF, MP4)</label>
                 <div class="video-note" style="font-size: 11px; margin-bottom: 6px; color: #666;">
-                    Video background? Convert your MP4 to GIF here: 
-                    <a href="https://ezgif.com/video-to-gif" target="_blank" style="color: var(--primary-color);">ezgif.com</a>
+                    Supports images and MP4 video backgrounds.
                 </div>
-                <input type="file" id="imageUpload" accept="image/jpeg,image/png,image/gif" hidden>
+                <input type="file" id="imageUpload" accept="image/jpeg,image/png,image/gif,video/mp4" hidden>
                 <button id="uploadButton" class="button-secondary">Choose File...</button>
                 <span id="currentImageName">Using default image.</span>
             </section>

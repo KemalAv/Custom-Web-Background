@@ -28,7 +28,9 @@
                 currentSettings.uiMode = currentSettings.uiMode || 'chroma';
                 currentSettings.protectModals = currentSettings.protectModals ?? false;
                 currentSettings.autoTextColor = currentSettings.autoTextColor ?? false;
+                currentSettings.ignoreElementBg = currentSettings.ignoreElementBg ?? false;
                 currentSettings.animationsEnabled = currentSettings.animationsEnabled ?? false;
+                currentSettings.mediaType = currentSettings.mediaType || 'image';
                 callback?.();
             });
         } catch (e) { console.error(e); }
@@ -73,7 +75,7 @@
                 width: '100vw', height: '100vh',
                 zIndex: '-2147483647', pointerEvents: 'none',
                 overflow: 'hidden', opacity: 0,
-                transition: 'opacity 0.5s ease',
+                transition: 'none',
             });
 
             bgImage = document.createElement('img');
@@ -81,16 +83,29 @@
                 position: 'absolute', inset: 0,
                 width: '100%', height: '100%',
                 objectFit: 'cover', opacity: 0,
-                transition: 'opacity 0.5s ease',
+                transition: 'none',
             });
+
+            bgVideo = document.createElement('iframe');
+            Object.assign(bgVideo.style, {
+                position: 'absolute', inset: 0,
+                width: '100%', height: '100%',
+                opacity: 0,
+                transition: 'none',
+                border: 'none',
+                pointerEvents: 'none',
+                background: 'transparent',
+            });
+            bgVideo.allow = 'autoplay';
+            bgVideo.setAttribute('allowtransparency', 'true');
 
             bgOverlay = document.createElement('div');
             Object.assign(bgOverlay.style, {
                 position: 'absolute', inset: 0,
-                opacity: 0, transition: 'opacity 0.5s ease',
+                opacity: 0, transition: 'none',
             });
 
-            bgContainer.append(bgImage, bgOverlay);
+            bgContainer.append(bgImage, bgVideo, bgOverlay);
         }
 
         if (!document.documentElement.contains(bgContainer)) {
@@ -152,7 +167,8 @@
         if (bgContainer) {
             if (clearMedia) {
                 bgContainer.style.opacity = '0';
-                if (bgImage) bgImage.src = '';
+                if (bgImage) { bgImage.src = ''; bgImage.style.opacity = '0'; }
+                if (bgVideo) { bgVideo.removeAttribute('src'); bgVideo.style.opacity = '0'; }
                 lastLoadedSrc = '';
                 lastLoadedName = '';
                 lastLoadedLength = 0;
@@ -326,7 +342,7 @@
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
             acceptNode(node) {
                 if (node.hasAttribute(SAFE_ATTR)) return NodeFilter.FILTER_SKIP;
-                
+
                 // Small elements (icons, badges, etc) should never be transparent/glass
                 if (node.offsetWidth > 0 && node.offsetHeight > 0 && (node.offsetWidth < 32 || node.offsetHeight < 32)) {
                     return NodeFilter.FILTER_ACCEPT;
@@ -402,6 +418,7 @@
         }
 
         const dimColor = currentSettings.dimColor || 'dark';
+        const ignoreElementBg = currentSettings.ignoreElementBg ?? false;
 
         document.querySelectorAll(`body *:not(img):not(video):not(svg):not(iframe):not(canvas)`).forEach(el => {
             try {
@@ -416,6 +433,25 @@
                 // Hanya proses teks yang berwarna netral (putih, hitam, abu-abu)
                 if (!isNeutralColor(rgb)) return;
 
+                // === IGNORE ELEMENT BACKGROUND MODE ===
+                // When ignoreElementBg is ON, always force text color based on dim overlay,
+                // completely ignoring the element's own background color.
+                if (ignoreElementBg) {
+                    if (dimColor === 'dark') {
+                        if (el.getAttribute('data-glass-color') !== 'white') {
+                            el.style.setProperty('color', 'white', 'important');
+                            el.setAttribute('data-glass-color', 'white');
+                        }
+                    } else {
+                        if (el.getAttribute('data-glass-color') !== 'black') {
+                            el.style.setProperty('color', 'black', 'important');
+                            el.setAttribute('data-glass-color', 'black');
+                        }
+                    }
+                    return;
+                }
+
+                // === NORMAL MODE: respect element background ===
                 const bgRgba = getEffectiveBackgroundColor(el);
                 let bgLuminance = 1; // Default ke terang (putih)
                 let isOpaque = false;
@@ -569,7 +605,19 @@
         const imgSrc = currentSettings.imageUrl || currentSettings.imageDataUrl || '';
         const imgName = currentSettings.imageName || '';
         const imgLen = imgSrc.length;
+        const animDur = currentSettings.animationsEnabled ? '0.5s' : '0s';
+        const transStyle = `opacity ${animDur} ease`;
+        bgContainer.style.transition = transStyle;
+        bgImage.style.transition = transStyle;
+        bgVideo.style.transition = transStyle;
+        if (bgOverlay) bgOverlay.style.transition = transStyle;
+
         bgContainer.style.opacity = '1';
+
+        // Detect if media is video
+        const isVideoMedia = (currentSettings.mediaType === 'video') ||
+            /\.mp4(\?|$)/i.test(imgSrc) ||
+            (imgSrc.startsWith('data:video/'));
 
         if (imgSrc) {
             const isHeavy = imgLen > 10000000;
@@ -595,37 +643,82 @@
                     pendingHeavyLoad = false;
                 }
 
-                if (currentBlobUrl) {
-                    URL.revokeObjectURL(currentBlobUrl);
-                    currentBlobUrl = null;
-                }
-                const playbackSrc = imgSrc.startsWith('data:') ? (currentBlobUrl = dataUrlToBlobUrl(imgSrc)) : imgSrc;
+                if (isVideoMedia) {
+                    // === VIDEO MODE (via extension iframe to bypass CSP) ===
+                    bgImage.style.opacity = '0';
+                    bgImage.src = '';
 
-                bgImage.onerror = () => {
-                    if (loadSessionId === currentSession) {
-                        pendingHeavyLoad = false;
-                        pageSpinner?.classList.remove('visible');
-                        lastLoadedLength = 0;
-                        lastLoadedName = '';
+                    // Load the extension's video-bg.html in the iframe
+                    // The iframe page reads video data from chrome.storage internally
+                    try {
+                        const videoPageUrl = chrome.runtime.getURL('video-bg.html');
+                        if (!bgVideo.src || !bgVideo.src.includes('video-bg.html')) {
+                            bgVideo.src = videoPageUrl;
+                        }
+                        // Notify iframe to reload video from storage
+                        bgVideo.onload = () => {
+                            if (loadSessionId === currentSession) {
+                                lastLoadedSrc = imgSrc;
+                                pendingHeavyLoad = false;
+                                if (pageSpinner) pageSpinner.classList.remove('visible');
+                                clearTimeout(pendingLoadTimer);
+                                bgVideo.style.opacity = '1';
+                                // Tell the iframe to load video
+                                setTimeout(() => {
+                                    bgVideo.contentWindow?.postMessage({ type: 'update-video' }, '*');
+                                }, 100);
+                            }
+                        };
+                    } catch (e) {
+                        console.error('Video iframe setup failed:', e);
                     }
-                };
-                bgImage.onload = () => {
-                    if (loadSessionId === currentSession) {
-                        lastLoadedSrc = imgSrc;
-                        pendingHeavyLoad = false;
-                        if (pageSpinner) pageSpinner.classList.remove('visible');
-                        clearTimeout(pendingLoadTimer);
-                        bgImage.style.opacity = '1';
+                } else {
+                    // === IMAGE MODE ===
+                    bgVideo.style.opacity = '0';
+                    bgVideo.removeAttribute('src');
+
+                    if (currentBlobUrl) {
+                        URL.revokeObjectURL(currentBlobUrl);
+                        currentBlobUrl = null;
                     }
-                };
-                bgImage.src = playbackSrc;
+                    const playbackSrc = imgSrc.startsWith('data:') ? (currentBlobUrl = dataUrlToBlobUrl(imgSrc)) : imgSrc;
+
+                    bgImage.onerror = () => {
+                        if (loadSessionId === currentSession) {
+                            pendingHeavyLoad = false;
+                            pageSpinner?.classList.remove('visible');
+                            lastLoadedLength = 0;
+                            lastLoadedName = '';
+                        }
+                    };
+                    bgImage.onload = () => {
+                        if (loadSessionId === currentSession) {
+                            lastLoadedSrc = imgSrc;
+                            pendingHeavyLoad = false;
+                            if (pageSpinner) pageSpinner.classList.remove('visible');
+                            clearTimeout(pendingLoadTimer);
+                            bgImage.style.opacity = '1';
+                        }
+                    };
+                    bgImage.src = playbackSrc;
+                }
             } else if (!pendingHeavyLoad) {
-                bgImage.style.opacity = '1';
+                if (isVideoMedia) {
+                    bgVideo.style.opacity = '1';
+                } else {
+                    bgImage.style.opacity = '1';
+                }
             }
         }
 
         const blurFilter = currentSettings.blurIntensity ? `blur(${currentSettings.blurIntensity}px)` : 'none';
         if (bgImage) bgImage.style.filter = blurFilter;
+        // For video iframe, send filter via postMessage (blur is handled inside iframe)
+        if (bgVideo && bgVideo.contentWindow) {
+            try {
+                bgVideo.contentWindow.postMessage({ type: 'set-filter', filter: blurFilter }, '*');
+            } catch (e) { }
+        }
         if (bgOverlay) {
             bgOverlay.style.backgroundColor = currentSettings.dimColor === 'light' ? '#fff' : '#000';
             bgOverlay.style.opacity = currentSettings.dimLevel ?? 0;
@@ -635,7 +728,7 @@
     /** ==================== OBSERVER ==================== */
     const debouncedApply = debounce(() => {
         if (!currentSettings.isEnabled) return;
-        
+
         // Always refresh safe tags first to ensure persistence
         markSafeElements();
 
@@ -662,18 +755,18 @@
             let shouldUpdate = false;
             for (let mutation of mutations) {
                 // Ignore mutations on our own container or styles
-                if (mutation.target.id === BG_CONTAINER_ID || 
-                    mutation.target.id === STYLE_TAG_ID || 
+                if (mutation.target.id === BG_CONTAINER_ID ||
+                    mutation.target.id === STYLE_TAG_ID ||
                     mutation.target.id === GLASS_STYLE_ID) continue;
 
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                     // Check if added nodes aren't just our own spinner
-                    const realNodes = Array.from(mutation.addedNodes).some(node => 
+                    const realNodes = Array.from(mutation.addedNodes).some(node =>
                         node.nodeType === 1 && !node.classList?.contains('universal-spinner')
                     );
                     if (realNodes) { shouldUpdate = true; break; }
                 }
-                
+
                 if (mutation.type === 'attributes') {
                     if (mutation.attributeName === 'data-glass-color' ||
                         mutation.attributeName === 'data-bg-color' ||
@@ -686,11 +779,11 @@
                 debouncedApply();
             }
         });
-        
+
         mutationObserver.observe(document.documentElement, {
-            childList: true, 
+            childList: true,
             subtree: true,
-            attributes: true, 
+            attributes: true,
             attributeFilter: ["class", "style", "id"]
         });
     }

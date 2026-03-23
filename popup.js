@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const animationsCheckbox = document.getElementById('animationsCheckbox');
     const protectModalsCheckbox = document.getElementById('protectModalsCheckbox');
     const autoTextColorCheckbox = document.getElementById('autoTextColorCheckbox');
+    const ignoreElementBgCheckbox = document.getElementById('ignoreElementBgCheckbox');
+    const ignoreElementBgSection = document.getElementById('ignoreElementBgSection');
     const protectModalsSection = document.getElementById('protectModalsSection');
     const settingsPanel = document.getElementById('settings-panel');
     const imageUploadInput = document.getElementById('imageUpload');
@@ -29,13 +31,15 @@ document.addEventListener('DOMContentLoaded', () => {
             animationsEnabled: false,
             protectModals: false,
             autoTextColor: false,
+            ignoreElementBg: false,
             uiMode: 'chroma', // New setting
             imageName: 'Using default image.',
             imageDataUrl: null,
             imageUrl: 'https://images2.alphacoders.com/137/1375140.png',
             dimLevel: 0,
             dimColor: 'dark',
-            blurIntensity: 0
+            blurIntensity: 0,
+            mediaType: 'image'
         };
 
         chrome.storage.local.get(defaults, (settings) => {
@@ -43,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
             animationsCheckbox.checked = settings.animationsEnabled;
             protectModalsCheckbox.checked = settings.protectModals;
             autoTextColorCheckbox.checked = settings.autoTextColor;
+            ignoreElementBgCheckbox.checked = settings.ignoreElementBg;
             dimLevelInput.value = settings.dimLevel;
             blurSlider.value = settings.blurIntensity;
             imageUrlInput.value = settings.imageUrl || '';
@@ -59,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleSettingsPanel();
             toggleAnimations();
             toggleProtectModalsVisibility();
+            toggleIgnoreElementBgVisibility();
 
             // Auto apply default URL if set and no uploaded image
             if (settings.imageUrl && !settings.imageDataUrl) {
@@ -80,7 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
             animationsEnabled: animationsCheckbox.checked,
             protectModals: protectModalsCheckbox.checked,
             autoTextColor: autoTextColorCheckbox.checked,
-            uiMode: document.querySelector('input[name="uiMode"]:checked').value, // New setting
+            ignoreElementBg: ignoreElementBgCheckbox.checked,
+            uiMode: document.querySelector('input[name="uiMode"]:checked').value,
             dimLevel: dimLevelInput.value,
             blurIntensity: blurSlider.value,
             dimColor: document.querySelector('input[name="dimColor"]:checked').value
@@ -90,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
             settings.imageDataUrl = newImageData.url;
             settings.imageName = newImageData.name;
             settings.imageUrl = ''; // clear URL if uploading
+            settings.mediaType = newImageData.mediaType || 'image';
         }
 
         chrome.storage.local.set(settings, () => {
@@ -108,16 +116,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Detect if URL is a video
+        const isVideoUrl = /\.mp4(\?|$)/i.test(url);
+
         // We save the URL separately so it can be applied without hitting the main "Save"
         chrome.storage.local.set({
             imageUrl: url,
             imageDataUrl: null, // Clear file upload
-            imageName: 'From URL'
+            imageName: 'From URL',
+            mediaType: isVideoUrl ? 'video' : 'image'
         }, () => {
             currentImageNameSpan.textContent = 'From URL';
             currentImageNameSpan.style.color = 'var(--primary-color)';
             currentImageNameSpan.style.fontWeight = 'bold';
-            showStatus('Image URL applied!');
+            showStatus(isVideoUrl ? 'Video URL applied!' : 'Image URL applied!');
         });
     };
 
@@ -160,6 +172,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
+     * Toggle Ignore Element Background sub-option visibility based on Auto Text Color.
+     */
+    const toggleIgnoreElementBgVisibility = () => {
+        ignoreElementBgSection.style.display = autoTextColorCheckbox.checked ? 'block' : 'none';
+    };
+
+    /**
      * Handle image upload.
      */
     const handleImageUpload = (e) => {
@@ -187,9 +206,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show loading spinner while reading the file
         showStatus('<span class="spinner"></span> Loading...');
 
+        // Detect media type for content.js
+        const isVideo = file.type.startsWith('video/');
         const reader = new FileReader();
         reader.onload = (event) => {
-            newImageData = { url: event.target.result, name: file.name };
+            newImageData = { url: event.target.result, name: file.name, mediaType: isVideo ? 'video' : 'image' };
             currentImageNameSpan.textContent = `New: ${file.name}`;
             currentImageNameSpan.style.color = 'var(--primary-color)';
             currentImageNameSpan.style.fontWeight = 'bold';
@@ -204,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     enabledCheckbox.addEventListener('change', toggleSettingsPanel);
     animationsCheckbox.addEventListener('change', toggleAnimations);
+    autoTextColorCheckbox.addEventListener('change', toggleIgnoreElementBgVisibility);
     uploadButton.addEventListener('click', () => imageUploadInput.click());
     imageUploadInput.addEventListener('change', handleImageUpload);
     applyUrlButton.addEventListener('click', applyImageUrl);
