@@ -66,6 +66,32 @@
         };
     }
 
+    function getDimColorRgb() {
+        const dimColor = currentSettings.dimColor || 'black';
+        if (dimColor === 'white' || dimColor === 'light') return [255, 255, 255];
+        if (dimColor === 'custom') {
+            const match = /^#([0-9a-f]{6})$/i.exec(currentSettings.customDimColor || '');
+            if (match) {
+                return [
+                    parseInt(match[1].slice(0, 2), 16),
+                    parseInt(match[1].slice(2, 4), 16),
+                    parseInt(match[1].slice(4, 6), 16)
+                ];
+            }
+        }
+        return [0, 0, 0];
+    }
+
+    function getDimColorCss(alpha) {
+        const [r, g, b] = getDimColorRgb();
+        return typeof alpha === 'number' ? `rgba(${r},${g},${b},${alpha})` : `rgb(${r},${g},${b})`;
+    }
+
+    function isDimColorDark() {
+        const [r, g, b] = getDimColorRgb();
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
+    }
+
     function initContainer() {
         if (!bgContainer) {
             bgContainer = document.createElement('div');
@@ -191,60 +217,67 @@
 
     /** ==================== CHROMA MODE ==================== */
     function applyChromaBase() {
-        const dimLevel = currentSettings.dimLevel ?? 0.25;
-        const dimColor = currentSettings.dimColor || 'dark';
-        const alpha = dimLevel * 0.25;
-        const bgColor = dimColor === 'light' ? `rgba(255,255,255,${alpha})` : `rgba(0,0,0,${alpha})`;
+        const dimLevel = parseFloat(currentSettings.dimLevel ?? 0.4);
+        const bgColor = getDimColorCss(dimLevel);
 
         const animStyles = currentSettings.animationsEnabled ? `
         button, .btn, .button, [role="button"], 
         input[type="submit"], input[type="button"], input[type="reset"],
         [role="tab"], [role="link"], a, summary, select {
-            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
                         box-shadow 0.2s ease, 
                         background-color 0.2s ease,
-                        filter 0.2s ease !important;
+                        filter 0.2s ease;
         }
         button:hover, .btn:hover, .button:hover, [role="button"]:hover,
         input[type="submit"]:hover, input[type="button"]:hover,
         [role="tab"]:hover, [role="link"]:hover, a:hover, summary:hover {
-            transform: translateY(-2px) scale(1.02) !important;
-            filter: brightness(1.1) !important;
+            transform: translateY(-2px) scale(1.02);
+            filter: brightness(1.1);
         }
         button:active, .btn:active, .button:active, [role="button"]:active,
         input[type="submit"]:active, input[type="button"]:active,
         [role="tab"]:active, [role="link"]:active, a:active, summary:active {
-            filter: brightness(0.9) !important;
+            transform: translateY(0) scale(0.98);
+            filter: brightness(0.9);
         }
         ` : '';
 
         const popupAnim = currentSettings.animationsEnabled ? `
         @keyframes slideInUp {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         [role="dialog"], [role="menu"], .popup, .modal, .dropdown, .overlay, [aria-modal="true"] {
-            /* Use only opacity animation to prevent layout/position shifts */
-            animation: slideInUp 0.2s ease-out forwards !important;
+            animation: slideInUp 0.2s ease-out forwards;
         }
         ` : '';
 
-        styleTag.textContent = `
+        const newContent = `
         [data-bg-color], body {
             background: transparent !important;
             background-color: transparent !important;
             background-image: none !important;
         }
 
-        /* Tambahkan efek transparan untuk popup/dialog/modal/menu hanya jika proteksi dimatikan */
+        /* Add transparency effects to popups/dialogs/modals/menus only when protection is disabled */
         ${currentSettings.protectModals ? '' : `
         [role="dialog"]:not([${SAFE_ATTR}]),
         [role="menu"]:not([${SAFE_ATTR}]),
+        [role="menuitem"]:not([${SAFE_ATTR}]),
+        [role="combobox"]:not([${SAFE_ATTR}]),
+        [role="listbox"]:not([${SAFE_ATTR}]),
+        [role="option"]:not([${SAFE_ATTR}]),
+        [role="alertdialog"]:not([${SAFE_ATTR}]),
+        [role="popover"]:not([${SAFE_ATTR}]),
+        dialog:not([${SAFE_ATTR}]),
+        aside:not([${SAFE_ATTR}]),
         .popup:not([${SAFE_ATTR}]),
         .modal:not([${SAFE_ATTR}]),
         .dropdown:not([${SAFE_ATTR}]),
         .overlay:not([${SAFE_ATTR}]),
-        [aria-modal="true"]:not([${SAFE_ATTR}]) {
+        [aria-modal="true"]:not([${SAFE_ATTR}]),
+        [aria-expanded="true"]:not([${SAFE_ATTR}]) {
             background-color: ${bgColor} !important;
             backdrop-filter: blur(${currentSettings.blurIntensity || 8}px) !important;
             border-radius: 12px !important;
@@ -252,7 +285,11 @@
         `}
         ${animStyles}
         ${popupAnim}
-    `;
+        `;
+
+        if (styleTag && styleTag.textContent !== newContent) {
+            styleTag.textContent = newContent;
+        }
     }
 
     function safeTagElements(root) {
@@ -264,6 +301,9 @@
                 if (node.id === BG_CONTAINER_ID || node.closest('#' + BG_CONTAINER_ID)) return NodeFilter.FILTER_REJECT;
                 if (node.hasAttribute(SAFE_ATTR)) return NodeFilter.FILTER_REJECT;
                 if (node.hasAttribute('data-bg-color')) return NodeFilter.FILTER_REJECT;
+
+                // Propagate protection: if any ancestor is marked safe, reject this node
+                if (node.closest('[' + SAFE_ATTR + ']')) return NodeFilter.FILTER_REJECT;
 
                 // NEW: Tight UI Layer Protection
                 if (protectModals) {
@@ -278,17 +318,52 @@
                         const z = style.zIndex;
                         if (z !== 'auto' && parseInt(z) > 0) return NodeFilter.FILTER_REJECT;
 
-                        // 3. Deep Keyword Search (ID & Class)
+                        // 3. Deep Tag Name & Role Check
+                        const tag = node.tagName.toLowerCase();
+                        if (tag === 'dialog' || tag === 'aside') return NodeFilter.FILTER_REJECT;
+
+                        const role = node.getAttribute('role')?.toLowerCase() || '';
+                        const protectedRoles = ['dialog', 'menu', 'menuitem', 'combobox', 'listbox', 'option', 'alertdialog', 'popover', 'tooltip', 'status', 'alert'];
+                        if (protectedRoles.includes(role)) return NodeFilter.FILTER_REJECT;
+
+                        // 4. Box-Shadow & Drop-Shadow & Backdrop-Filter checks
+                        if ((style.boxShadow && style.boxShadow !== 'none') ||
+                            (style.filter && style.filter.includes('drop-shadow')) ||
+                            (style.backdropFilter && style.backdropFilter !== 'none') ||
+                            (style.webkitBackdropFilter && style.webkitBackdropFilter !== 'none')) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+
+                        // 5. Large Viewport Overlay detection
+                        const width = node.offsetWidth || 0;
+                        const height = node.offsetHeight || 0;
+                        if ((pos === 'fixed' || pos === 'absolute') && width > window.innerWidth * 0.9 && height > window.innerHeight * 0.9) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+
+                        // 6. Deep Keyword Search (ID & Class)
                         const id = node.id?.toLowerCase() || '';
                         const className = (typeof node.className === 'string' ? node.className : '').toLowerCase();
-                        const uiKeywords = ['modal', 'popup', 'dialog', 'swal', 'portal', 'popper', 'wrapper', 'banner', 'tooltip', 'notify', 'alert', 'layer', 'panel', 'overlay', 'mask', 'drawer'];
+                        const uiKeywords = [
+                            'modal', 'popup', 'dialog', 'swal', 'portal', 'popper', 'wrapper', 'banner', 'tooltip', 'notify', 'alert', 'layer', 'panel', 'overlay', 'mask', 'drawer',
+                            'dropdown', 'menu', 'combobox', 'select', 'popover', 'lightbox', 'toast', 'notification', 'sidebar', 'sheet', 'flyout', 'fixed', 'window', 'backdrop', 'shield', 'cover',
+                            'tip', 'hint', 'balloon', 'bubble', 'alertdialog', 'picker', 'datepicker', 'calendar', 'autocomplete', 'dropdown-menu', 'modal-content', 'modal-dialog'
+                        ];
 
                         if (uiKeywords.some(key => id.includes(key) || className.includes(key))) {
                             return NodeFilter.FILTER_REJECT;
                         }
 
-                        // 4. Portal & Headless UI check
-                        if (node.hasAttribute('data-radix-portal') || node.hasAttribute('data-headlessui-portal') || node.hasAttribute('aria-haspopup')) {
+                        // 7. Portal, Headless UI, & State Check
+                        if (node.hasAttribute('data-radix-portal') ||
+                            node.hasAttribute('data-headlessui-portal') ||
+                            node.hasAttribute('aria-haspopup') ||
+                            node.hasAttribute('aria-expanded') ||
+                            node.getAttribute('aria-expanded') === 'true' ||
+                            node.getAttribute('data-state')?.includes('open') ||
+                            node.hasAttribute('data-tippy-root') ||
+                            node.hasAttribute('data-popover') ||
+                            node.hasAttribute('data-modal')) {
                             return NodeFilter.FILTER_REJECT;
                         }
                     } catch (e) { }
@@ -332,12 +407,16 @@
             .forEach(el => el.setAttribute(SAFE_ATTR, 'true'));
 
         // 2. Functional Rules (Buttons, inputs, etc)
-        document.querySelectorAll('header, nav, footer, button, [type="submit"], [role="button"], [role="menu"], [role="dialog"], [role="alert"], [role="status"], [role="tooltip"], [role="banner"], [role="navigation"], input, select, textarea, a, [onclick], [tabindex], .btn, .button, .badge, .label, .tag, .toast, .alert, .modal, .popup, .dropdown, .card-header, .card-footer, img, video, svg, canvas, iframe, .swal2-container, .swal-overlay, .modal-backdrop, .MuiDialog-root, .MuiPopover-root, .MuiMenu-root, .flatpickr-calendar, .ui-datepicker, .select2-container, [id*="portal"], [id*="popper"], [class*="portal"], [class*="popper"], [data-radix-portal], [data-headlessui-portal]')
+        document.querySelectorAll('header, nav, footer, button, [type="submit"], [role="button"], [role="menu"], [role="dialog"], [role="alert"], [role="status"], [role="tooltip"], [role="banner"], [role="navigation"], [role="menuitem"], [role="combobox"], [role="listbox"], [role="option"], [role="alertdialog"], [role="popover"], dialog, aside, input, select, textarea, a, [onclick], [tabindex], .btn, .button, .badge, .label, .tag, .toast, .alert, .modal, .popup, .dropdown, .card-header, .card-footer, img, video, svg, canvas, iframe, .swal2-container, .swal-overlay, .modal-backdrop, .MuiDialog-root, .MuiPopover-root, .MuiMenu-root, .flatpickr-calendar, .ui-datepicker, .select2-container, [id*="portal"], [id*="popper"], [class*="portal"], [class*="popper"], [data-radix-portal], [data-headlessui-portal], [aria-haspopup], [aria-expanded], [data-state], [data-tippy-root], [data-popover], [data-modal]')
             .forEach(el => el.setAttribute(SAFE_ATTR, 'true'));
 
         // 3. Dynamic UI Protection (Strict Check)
         const protectModals = currentSettings.protectModals ?? false;
-        const uiKeywords = ['modal', 'popup', 'dialog', 'swal', 'portal', 'popper', 'wrapper', 'banner', 'tooltip', 'notify', 'alert', 'layer', 'panel', 'overlay', 'mask', 'drawer'];
+        const uiKeywords = [
+            'modal', 'popup', 'dialog', 'swal', 'portal', 'popper', 'wrapper', 'banner', 'tooltip', 'notify', 'alert', 'layer', 'panel', 'overlay', 'mask', 'drawer',
+            'dropdown', 'menu', 'combobox', 'select', 'popover', 'lightbox', 'toast', 'notification', 'sidebar', 'sheet', 'flyout', 'fixed', 'window', 'backdrop', 'shield', 'cover',
+            'tip', 'hint', 'balloon', 'bubble', 'alertdialog', 'picker', 'datepicker', 'calendar', 'autocomplete', 'dropdown-menu', 'modal-content', 'modal-dialog'
+        ];
 
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
             acceptNode(node) {
@@ -356,16 +435,47 @@
 
                         // Position check
                         if (pos === 'fixed' || pos === 'sticky' || pos === 'absolute') return NodeFilter.FILTER_ACCEPT;
-                        // Z-Index check
-                        if (z !== 'auto' && parseInt(z) > 1) return NodeFilter.FILTER_ACCEPT;
+                        // Z-Index check (Z > 0 considered UI layer)
+                        if (z !== 'auto' && parseInt(z) > 0) return NodeFilter.FILTER_ACCEPT;
+
+                        // Tag & Role check
+                        const tag = node.tagName.toLowerCase();
+                        if (tag === 'dialog' || tag === 'aside') return NodeFilter.FILTER_ACCEPT;
+
+                        const role = node.getAttribute('role')?.toLowerCase() || '';
+                        const protectedRoles = ['dialog', 'menu', 'menuitem', 'combobox', 'listbox', 'option', 'alertdialog', 'popover', 'tooltip', 'status', 'alert'];
+                        if (protectedRoles.includes(role)) return NodeFilter.FILTER_ACCEPT;
+
+                        // Box-Shadow & Drop-Shadow & Backdrop-Filter checks
+                        if ((style.boxShadow && style.boxShadow !== 'none') ||
+                            (style.filter && style.filter.includes('drop-shadow')) ||
+                            (style.backdropFilter && style.backdropFilter !== 'none') ||
+                            (style.webkitBackdropFilter && style.webkitBackdropFilter !== 'none')) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+
+                        // Large Viewport Overlay detection
+                        const width = node.offsetWidth || 0;
+                        const height = node.offsetHeight || 0;
+                        if ((pos === 'fixed' || pos === 'absolute') && width > window.innerWidth * 0.9 && height > window.innerHeight * 0.9) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
 
                         // Keyword check
                         const id = node.id?.toLowerCase() || '';
                         const className = (typeof node.className === 'string' ? node.className : '').toLowerCase();
                         if (uiKeywords.some(key => id.includes(key) || className.includes(key))) return NodeFilter.FILTER_ACCEPT;
 
-                        // Portal check
-                        if (node.hasAttribute('data-radix-portal') || node.hasAttribute('data-headlessui-portal') || node.hasAttribute('aria-haspopup')) {
+                        // Portal & State check
+                        if (node.hasAttribute('data-radix-portal') ||
+                            node.hasAttribute('data-headlessui-portal') ||
+                            node.hasAttribute('aria-haspopup') ||
+                            node.hasAttribute('aria-expanded') ||
+                            node.getAttribute('aria-expanded') === 'true' ||
+                            node.getAttribute('data-state')?.includes('open') ||
+                            node.hasAttribute('data-tippy-root') ||
+                            node.hasAttribute('data-popover') ||
+                            node.hasAttribute('data-modal')) {
                             return NodeFilter.FILTER_ACCEPT;
                         }
                     } catch (e) { }
@@ -377,6 +487,13 @@
         while (walker.nextNode()) {
             walker.currentNode.setAttribute(SAFE_ATTR, 'true');
         }
+
+        // Clean up data-bg-color from any element that has data-safe-chroma or is a child of one
+        if (protectModals) {
+            document.querySelectorAll(`[${SAFE_ATTR}], [${SAFE_ATTR}] *`).forEach(el => {
+                el.removeAttribute('data-bg-color');
+            });
+        }
     }
 
     /** ==================== GLASS MODE ==================== */
@@ -386,7 +503,7 @@
         const min = Math.min(r, g, b);
         const delta = max - min;
         const saturation = max === 0 ? 0 : delta / max;
-        return saturation < 0.2; // threshold netral (lebih ketat agar tidak mewarnai teks berwarna)
+        return saturation < 0.2; // neutral threshold (stricter to avoid recoloring colored text)
     }
 
     function getEffectiveBackgroundColor(el) {
@@ -417,12 +534,12 @@
             return;
         }
 
-        const dimColor = currentSettings.dimColor || 'dark';
+        const useLightText = isDimColorDark();
         const ignoreElementBg = currentSettings.ignoreElementBg ?? false;
 
         document.querySelectorAll(`body *:not(img):not(video):not(svg):not(iframe):not(canvas)`).forEach(el => {
             try {
-                // Lewati jika hanya container gambar/video/kosong
+                // Skip if this is only an image/video/empty container
                 if (el.children.length === 0 && !el.textContent.trim()) return;
 
                 const style = getComputedStyle(el);
@@ -430,14 +547,14 @@
                 const rgb = currentColor.match(/\d+/g)?.map(Number);
                 if (!rgb || rgb.length < 3) return;
 
-                // Hanya proses teks yang berwarna netral (putih, hitam, abu-abu)
+                // Only process neutrally colored text (white, black, gray)
                 if (!isNeutralColor(rgb)) return;
 
                 // === IGNORE ELEMENT BACKGROUND MODE ===
                 // When ignoreElementBg is ON, always force text color based on dim overlay,
                 // completely ignoring the element's own background color.
                 if (ignoreElementBg) {
-                    if (dimColor === 'dark') {
+                    if (useLightText) {
                         if (el.getAttribute('data-glass-color') !== 'white') {
                             el.style.setProperty('color', 'white', 'important');
                             el.setAttribute('data-glass-color', 'white');
@@ -453,7 +570,7 @@
 
                 // === NORMAL MODE: respect element background ===
                 const bgRgba = getEffectiveBackgroundColor(el);
-                let bgLuminance = 1; // Default ke terang (putih)
+                let bgLuminance = 1; // Default to bright (white)
                 let isOpaque = false;
 
                 if (bgRgba) {
@@ -465,7 +582,7 @@
                     }
                 }
 
-                // Rule 1: Teks pada icon/background GELAP harus PUTIH (untuk kontras)
+                // Rule 1: Text on DARK icons/backgrounds must be WHITE (for contrast)
                 if (isOpaque && bgLuminance < 0.35) {
                     if (el.getAttribute('data-glass-color') !== 'white') {
                         el.style.setProperty('color', 'white', 'important');
@@ -474,9 +591,9 @@
                     return;
                 }
 
-                // Rule 2: Perilaku Dark Mode (Dim Color: Black)
-                if (dimColor === 'dark') {
-                    // Paksa teks ke putih kecuali jika di atas background yang sudah terang
+                // Rule 2: Dark overlays use light text.
+                if (useLightText) {
+                    // Force text to white unless it is over an already bright background
                     if (isOpaque && bgLuminance > 0.65) {
                         if (el.hasAttribute('data-glass-color')) {
                             el.style.removeProperty('color');
@@ -491,9 +608,9 @@
                     return;
                 }
 
-                // Rule 3: Perilaku Light Mode (Dim Color: White)
-                if (dimColor === 'light') {
-                    // Paksa teks ke hitam kecuali jika di atas background yang lumayan gelap
+                // Rule 3: Bright overlays use dark text.
+                if (!useLightText) {
+                    // Force text to black unless it is over a sufficiently dark background
                     if (isOpaque && bgLuminance < 0.5) {
                         if (el.hasAttribute('data-glass-color')) {
                             el.style.removeProperty('color');
@@ -513,45 +630,47 @@
     }
 
     function applyGlassStep() {
-        const { dimLevel = 0.25, dimColor = 'dark', blurIntensity = 8 } = currentSettings;
-        const alpha = dimLevel * 0.25;
-        const bgColor = dimColor === 'light' ? `rgba(255,255,255,${alpha})` : `rgba(0,0,0,${alpha})`;
+        const { blurIntensity = 8 } = currentSettings;
+        // Scale down dimLevel for Glass UI so it's less brutal (100% slider = 25% opacity)
+        const dimLevel = parseFloat(currentSettings.dimLevel ?? 0.4) * 0.25;
+        const bgColor = getDimColorCss(dimLevel);
 
         const animStyles = currentSettings.animationsEnabled ? `
             button, .btn, .button, [role="button"], 
             input[type="submit"], input[type="button"], input[type="reset"],
             [role="tab"], [role="link"], a, summary, select {
-                transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
                             box-shadow 0.2s ease, 
                             background-color 0.2s ease,
-                            filter 0.2s ease !important;
+                            filter 0.2s ease;
             }
             button:hover, .btn:hover, .button:hover, [role="button"]:hover,
             input[type="submit"]:hover, input[type="button"]:hover,
             [role="tab"]:hover, [role="link"]:hover, a:hover, summary:hover {
-                transform: translateY(-2px) scale(1.02) !important;
-                filter: brightness(1.1) !important;
+                transform: translateY(-2px) scale(1.02);
+                filter: brightness(1.1);
             }
             button:active, .btn:active, .button:active, [role="button"]:active,
             input[type="submit"]:active, input[type="button"]:active,
             [role="tab"]:active, [role="link"]:active, a:active, summary:active {
-                filter: brightness(0.9) !important;
+                transform: translateY(0) scale(0.98);
+                filter: brightness(0.9);
             }
         ` : '';
 
         const popupAnim = currentSettings.animationsEnabled ? `
             @keyframes slideInUp {
-                from { opacity: 0; }
-                to { opacity: 1; }
+                from { opacity: 0; transform: translateY(8px); }
+                to { opacity: 1; transform: translateY(0); }
             }
             [role="dialog"], [role="menu"], .popup, .modal, .dropdown, .overlay, [aria-modal="true"] {
-                animation: slideInUp 0.2s ease-out forwards !important;
+                animation: slideInUp 0.2s ease-out forwards;
             }
         ` : '';
 
         const glassTag = document.getElementById(GLASS_STYLE_ID);
-        glassTag.textContent = `
-            *:not([${SAFE_ATTR}]):not(img):not(video):not(svg):not(canvas):not(iframe) { 
+        const newContent = `
+            *:not([${SAFE_ATTR}]):not([${SAFE_ATTR}] *):not(img):not(video):not(svg):not(canvas):not(iframe) { 
                 background-color: ${bgColor} !important; 
                 border-radius: 12px !important; 
             }
@@ -562,7 +681,7 @@
                 backdrop-filter: none !important;
             }
 
-            [role="dialog"], [role="menu"], .popup, .modal, .dropdown, .overlay, [aria-modal="true"] {
+            [role="dialog"], [role="menu"], [role="menuitem"], [role="combobox"], [role="listbox"], [role="option"], [role="alertdialog"], [role="popover"], dialog, aside, .popup, .modal, .dropdown, .overlay, [aria-modal="true"], [aria-expanded="true"] {
                 ${currentSettings.protectModals ? '' : `
                     background-color: ${bgColor} !important;
                     backdrop-filter: blur(${blurIntensity}px) !important;
@@ -571,6 +690,9 @@
             ${animStyles}
             ${popupAnim}
         `;
+        if (glassTag && glassTag.textContent !== newContent) {
+            glassTag.textContent = newContent;
+        }
     }
 
     /** ==================== APPLY ==================== */
@@ -720,8 +842,8 @@
             } catch (e) { }
         }
         if (bgOverlay) {
-            bgOverlay.style.backgroundColor = currentSettings.dimColor === 'light' ? '#fff' : '#000';
-            bgOverlay.style.opacity = currentSettings.dimLevel ?? 0;
+            bgOverlay.style.backgroundColor = getDimColorCss();
+            bgOverlay.style.opacity = parseFloat(currentSettings.dimLevel ?? 0);
         }
     }
 

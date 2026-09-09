@@ -10,7 +10,13 @@
 <body>
     <div class="container">
         <header>
-            <h3>Custom Web Background</h3>
+            <div class="header-title-row">
+                <h3>
+                    <span>Custom Web Background</span>
+                </h3>
+                <button id="helpButton" class="help-button" type="button" aria-label="Open the user guide"
+                    title="User guide">?</button>
+            </div>
             <div class="toggle-switch">
                 <label for="enabledCheckbox">Enable Extension</label>
                 <input type="checkbox" id="enabledCheckbox" checked>
@@ -51,7 +57,10 @@
                 <label>UI Mode:</label>
                 <div class="radio-group" id="uiModeGroup">
                     <label><input type="radio" name="uiMode" value="chroma" checked> Chroma Key (Default)</label>
-                    <label><input type="radio" name="uiMode" value="glass"> Glass UI</label>
+                    <label class="mode-option">
+                        <input type="radio" name="uiMode" value="glass">
+                        <span class="mode-label-text">Glass UI (Beta)</span>
+                    </label>
                 </div>
             </section>
 
@@ -79,14 +88,20 @@
 
             <section class="form-group">
                 <label for="dimLevel">Background Dim: <span id="dimValue">40%</span></label>
-                <input type="range" id="dimLevel" min="0" max="1" step="0.05">
+                <input type="range" id="dimLevel" min="0" max="1" step="0.05" value="0.4">
             </section>
 
             <section class="form-group">
                 <label>Dim Overlay Color:</label>
                 <div class="radio-group" id="dimColorGroup">
-                    <label><input type="radio" name="dimColor" value="dark" checked> Dark</label>
-                    <label><input type="radio" name="dimColor" value="light"> Light</label>
+                    <label><input type="radio" name="dimColor" value="black" checked> Black</label>
+                    <label><input type="radio" name="dimColor" value="white"> White</label>
+                    <label><input type="radio" name="dimColor" value="custom"> Custom</label>
+                </div>
+                <div class="custom-color-row" id="customDimColorSection" hidden>
+                    <label for="customDimColor">Pick color</label>
+                    <input type="color" id="customDimColor" value="#000000">
+                    <output id="customDimColorValue" for="customDimColor">#000000</output>
                 </div>
             </section>
 
@@ -103,6 +118,7 @@
             </p>
         </footer>
     </div>
+
     <script src="popup.js"></script>
 </body>
 

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome — Custom Web Background</title>
+    <link rel="stylesheet" href="welcome.css">
+</head>
+
+<body>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <header class="site-header">
+        <a class="brand" href="#top" aria-label="Custom Web Background">
+            <img src="icons/icon128.png" alt="">
+            <span>Custom Web Background</span>
+        </a>
+    </header>
+
+    <main id="top">
+        <section class="hero">
+            <div class="success-pill"><span aria-hidden="true">&#10003;</span> Extension installed successfully</div>
+            <h1>Your favorite wallpaper,<br><span>on every website.</span></h1>
+            <p class="hero-copy">Transform the web with your own image, GIF, or video. Follow these three simple steps to get started.</p>
+            <div class="hero-actions">
+                <a class="primary-action" href="#how-to-use">See how to use it <span aria-hidden="true">&darr;</span></a>
+                <button id="openExtensionButton" class="secondary-action" type="button">Open extension</button>
+            </div>
+            <p id="openExtensionHint" class="action-hint" role="status" aria-live="polite"></p>
+        </section>
+
+        <section id="how-to-use" class="guide-section" aria-labelledby="guideTitle">
+            <div class="section-heading">
+                <p class="eyebrow">GET STARTED IN 3 STEPS</p>
+                <h2 id="guideTitle">How to use the extension</h2>
+                <p>All settings are available by clicking the extension icon in the browser toolbar.</p>
+            </div>
+
+            <ol class="step-grid">
+                <li class="step-card">
+                    <span class="step-label">STEP 01</span>
+                    <div class="step-icon" aria-hidden="true">&#8593;</div>
+                    <h3>Choose a background</h3>
+                    <p>Click <strong>Choose File</strong> to use a JPG, PNG, GIF, or MP4 from your device.</p>
+                    <span class="or-divider">OR</span>
+                    <p>Paste a media link into the URL field, then click <strong>Apply URL</strong>.</p>
+                </li>
+                <li class="step-card featured">
+                    <span class="step-label">STEP 02</span>
+                    <div class="step-icon" aria-hidden="true">&#9788;</div>
+                    <h3>Customize its appearance</h3>
+                    <p>Choose <strong>Chroma Key</strong> for simple transparency or <strong>Glass UI</strong> for a glass effect.</p>
+                    <div class="mini-controls" aria-hidden="true">
+                        <span>Blur</span><i><b class="blur-fill"></b></i>
+                        <span>Dim</span><i><b class="dim-fill"></b></i>
+                    </div>
+                </li>
+                <li class="step-card">
+                    <span class="step-label">STEP 03</span>
+                    <div class="step-icon" aria-hidden="true">&#10003;</div>
+                    <h3>Apply &amp; save</h3>
+                    <p>Click <strong>Apply &amp; Save</strong>. Refresh the website tab if the changes are not immediately visible.</p>
+                    <div class="fake-save">Apply &amp; Save</div>
+                </li>
+            </ol>
+        </section>
+
+        <section class="feature-section" aria-labelledby="featureTitle">
+            <div class="section-heading">
+                <p class="eyebrow">EXPLORE THE SETTINGS</p>
+                <h2 id="featureTitle">Make every page comfortable to view</h2>
+            </div>
+            <div class="feature-grid">
+                <article><span aria-hidden="true">&#9672;</span><div><h3>Background Blur</h3><p>Softens wallpaper details so the content stays in focus.</p></div></article>
+                <article><span aria-hidden="true">&#9680;</span><div><h3>Background Dim</h3><p>Adjusts the brightness level over the wallpaper.</p></div></article>
+                <article><span aria-hidden="true">Aa</span><div><h3>Auto Correct Text</h3><p>Adjusts text colors so they remain easy to read.</p></div></article>
+                <article><span aria-hidden="true">&#9635;</span><div><h3>Protect Modals</h3><p>Protects menus and dialogs from becoming transparent.</p></div></article>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>Custom Web Background <span aria-hidden="true">&middot;</span> Settings and media are stored locally in your browser.</p>
+    </footer>
+
+    <script src="welcome.js"></script>
+</body>
+
+</html>

@@ -15,12 +15,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentImageNameSpan = document.getElementById('currentImageName');
     const dimLevelInput = document.getElementById('dimLevel');
     const dimValueSpan = document.getElementById('dimValue');
+    const customDimColorInput = document.getElementById('customDimColor');
+    const customDimColorSection = document.getElementById('customDimColorSection');
+    const customDimColorValue = document.getElementById('customDimColorValue');
     const blurSlider = document.getElementById('blurSlider');
     const blurValueSpan = document.getElementById('blurValue');
     const saveButton = document.getElementById('saveButton');
     const statusDiv = document.getElementById('status');
+    const helpButton = document.getElementById('helpButton');
 
     let newImageData = null;
+
+    /** Open the full guide page in a new browser tab. */
+    const openGuide = () => {
+        chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+    };
+
 
     /**
      * Load settings from chrome.storage and populate UI.
@@ -32,12 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
             protectModals: false,
             autoTextColor: false,
             ignoreElementBg: false,
-            uiMode: 'chroma', // New setting
+            uiMode: 'chroma',
             imageName: 'Using default image.',
             imageDataUrl: null,
             imageUrl: 'https://images2.alphacoders.com/137/1375140.png',
-            dimLevel: 0,
-            dimColor: 'dark',
+            dimLevel: 0.4,
+            dimColor: 'black',
+            customDimColor: '#000000',
             blurIntensity: 0,
             mediaType: 'image'
         };
@@ -57,10 +68,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const uiModeRadio = document.querySelector(`input[name="uiMode"][value="${settings.uiMode}"]`);
             if (uiModeRadio) uiModeRadio.checked = true;
 
-            const dimColorRadio = document.querySelector(`input[name="dimColor"][value="${settings.dimColor}"]`);
+            // Migrate the old dark/light values without breaking existing users.
+            const normalizedDimColor = settings.dimColor === 'dark'
+                ? 'black'
+                : settings.dimColor === 'light' ? 'white' : settings.dimColor;
+            const dimColorRadio = document.querySelector(`input[name="dimColor"][value="${normalizedDimColor}"]`);
             if (dimColorRadio) dimColorRadio.checked = true;
+            customDimColorInput.value = /^#[0-9a-f]{6}$/i.test(settings.customDimColor)
+                ? settings.customDimColor
+                : '#000000';
 
             updateUIValues();
+            toggleCustomDimColorVisibility();
             toggleSettingsPanel();
             toggleAnimations();
             toggleProtectModalsVisibility();
@@ -81,24 +100,34 @@ document.addEventListener('DOMContentLoaded', () => {
      * Save current UI settings to chrome.storage.
      */
     const saveSettings = () => {
+        const uiModeChecked = document.querySelector('input[name="uiMode"]:checked');
+        const dimColorChecked = document.querySelector('input[name="dimColor"]:checked');
+
+        if (!uiModeChecked || !dimColorChecked) {
+            showStatus('Error: UI options not selected.');
+            return;
+        }
+
         const settings = {
             isEnabled: enabledCheckbox.checked,
             animationsEnabled: animationsCheckbox.checked,
             protectModals: protectModalsCheckbox.checked,
             autoTextColor: autoTextColorCheckbox.checked,
             ignoreElementBg: ignoreElementBgCheckbox.checked,
-            uiMode: document.querySelector('input[name="uiMode"]:checked').value,
-            dimLevel: dimLevelInput.value,
-            blurIntensity: blurSlider.value,
-            dimColor: document.querySelector('input[name="dimColor"]:checked').value
+            uiMode: uiModeChecked.value,
+            dimLevel: parseFloat(dimLevelInput.value),
+            blurIntensity: parseInt(blurSlider.value, 10),
+            dimColor: dimColorChecked.value,
+            customDimColor: customDimColorInput.value
         };
 
         if (newImageData) {
             settings.imageDataUrl = newImageData.url;
             settings.imageName = newImageData.name;
-            settings.imageUrl = ''; // clear URL if uploading
+            settings.imageUrl = ''; // clear URL if uploading a file
             settings.mediaType = newImageData.mediaType || 'image';
         }
+        // Note: imageUrl/imageName/mediaType are preserved in storage when no new file is uploaded
 
         chrome.storage.local.set(settings, () => {
             showStatus('Settings Applied!');
@@ -136,9 +165,15 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Show status message temporarily.
      */
-    const showStatus = (message) => {
-        statusDiv.innerHTML = message;
-        setTimeout(() => { statusDiv.innerHTML = ''; }, 2000);
+    const showStatus = (message, isHtml = false) => {
+        if (isHtml) {
+            statusDiv.innerHTML = message;
+        } else {
+            statusDiv.textContent = message;
+        }
+        if (message) {
+            setTimeout(() => { statusDiv.textContent = ''; }, 2000);
+        }
     };
 
     /**
@@ -147,6 +182,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateUIValues = () => {
         dimValueSpan.textContent = `${Math.round(dimLevelInput.value * 100)}%`;
         blurValueSpan.textContent = `${blurSlider.value}px`;
+        customDimColorValue.textContent = customDimColorInput.value.toUpperCase();
+    };
+
+    /** Show the color picker only when Custom is selected. */
+    const toggleCustomDimColorVisibility = () => {
+        const selected = document.querySelector('input[name="dimColor"]:checked');
+        customDimColorSection.hidden = selected?.value !== 'custom';
     };
 
     /**
@@ -179,6 +221,85 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
+     * Estimate video frame rate (FPS).
+     */
+    const estimateVideoFPS = (file, callback) => {
+        const video = document.createElement('video');
+        video.muted = true;
+        video.playsInline = true;
+
+        const url = URL.createObjectURL(file);
+        video.src = url;
+
+        video.play().then(() => {
+            let frames = 0;
+            let startMediaTime = null;
+            let lastMediaTime = null;
+            let startRealTime = performance.now();
+            let timeoutId = null;
+
+            const checkFrame = (now, metadata) => {
+                if (startMediaTime === null) {
+                    startMediaTime = metadata.mediaTime;
+                }
+                lastMediaTime = metadata.mediaTime;
+                frames++;
+
+                const elapsedRealTime = performance.now() - startRealTime;
+                if (frames >= 15 || elapsedRealTime > 400) {
+                    video.pause();
+                    const mediaDuration = lastMediaTime - startMediaTime;
+                    let fps = 0;
+                    // Need at least 2 frames to compute a meaningful interval
+                    if (mediaDuration > 0 && frames > 1) {
+                        fps = (frames - 1) / mediaDuration;
+                    }
+                    cleanup();
+                    callback(fps);
+                    return;
+                }
+
+                video.requestVideoFrameCallback(checkFrame);
+            };
+
+            const cleanup = () => {
+                if (timeoutId) clearTimeout(timeoutId);
+                video.pause();
+                video.src = '';
+                video.load();
+                URL.revokeObjectURL(url);
+            };
+
+            timeoutId = setTimeout(() => {
+                cleanup();
+                callback(0);
+            }, 2000);
+
+            if ('requestVideoFrameCallback' in video) {
+                video.requestVideoFrameCallback(checkFrame);
+            } else {
+                // Fallback: estimate from duration / check frame count or video playback qualities if possible
+                setTimeout(() => {
+                    let fps = 0;
+                    if (video.getVideoPlaybackQuality) {
+                        const q = video.getVideoPlaybackQuality();
+                        const totalFrames = q.totalVideoFrames;
+                        if (totalFrames > 0) {
+                            fps = totalFrames / (video.currentTime || 0.5);
+                        }
+                    }
+                    cleanup();
+                    callback(fps);
+                }, 400);
+            }
+        }).catch(err => {
+            console.error('Error playing video for FPS estimation:', err);
+            URL.revokeObjectURL(url);
+            callback(0);
+        });
+    };
+
+    /**
      * Handle image upload.
      */
     const handleImageUpload = (e) => {
@@ -203,23 +324,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Show loading spinner while reading the file
-        showStatus('<span class="spinner"></span> Loading...');
-
-        // Detect media type for content.js
         const isVideo = file.type.startsWith('video/');
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            newImageData = { url: event.target.result, name: file.name, mediaType: isVideo ? 'video' : 'image' };
-            currentImageNameSpan.textContent = `New: ${file.name}`;
-            currentImageNameSpan.style.color = 'var(--primary-color)';
-            currentImageNameSpan.style.fontWeight = 'bold';
-            showStatus(''); // clear status
+
+        const processFile = () => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                newImageData = { url: event.target.result, name: file.name, mediaType: isVideo ? 'video' : 'image' };
+                currentImageNameSpan.textContent = `New: ${file.name}`;
+                currentImageNameSpan.style.color = 'var(--primary-color)';
+                currentImageNameSpan.style.fontWeight = 'bold';
+                showStatus(''); // clear status
+            };
+            reader.onerror = () => {
+                showStatus('Failed to read file.');
+            };
+            reader.readAsDataURL(file);
         };
-        reader.onerror = () => {
-            showStatus('Failed to read file.');
-        };
-        reader.readAsDataURL(file);
+
+        if (isVideo) {
+            // Show scanning status
+            showStatus('<span class="spinner"></span> Analyzing video frame rate...', true);
+            estimateVideoFPS(file, (fps) => {
+                if (fps > 25) {
+                    const proceed = confirm(`Please ensure the video frame rate is under 25 fps to reduce lag.\n(Detected: ${fps.toFixed(1)} fps)\n\nDo you want to continue?`);
+                    if (!proceed) {
+                        showStatus('Upload cancelled.');
+                        e.target.value = ''; // Clear the input
+                        return;
+                    }
+                }
+                showStatus('<span class="spinner"></span> Loading...', true);
+                processFile();
+            });
+        } else {
+            showStatus('<span class="spinner"></span> Loading...', true);
+            processFile();
+        }
     };
 
     // --- Event Listeners ---
@@ -231,10 +371,15 @@ document.addEventListener('DOMContentLoaded', () => {
     applyUrlButton.addEventListener('click', applyImageUrl);
     dimLevelInput.addEventListener('input', updateUIValues);
     blurSlider.addEventListener('input', updateUIValues);
+    customDimColorInput.addEventListener('input', updateUIValues);
+    document.querySelectorAll('input[name="dimColor"]').forEach(radio => {
+        radio.addEventListener('change', toggleCustomDimColorVisibility);
+    });
     document.querySelectorAll('input[name="uiMode"]').forEach(radio => {
         radio.addEventListener('change', toggleProtectModalsVisibility);
     });
     saveButton.addEventListener('click', saveSettings);
+    helpButton.addEventListener('click', openGuide);
 
     // Initialize on load
     loadSettings();
