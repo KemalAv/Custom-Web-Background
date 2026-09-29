@@ -49,9 +49,7 @@
                 playbackSrc = currentBlobUrl;
             }
 
-            // Apply animations
-            const animDur = settings.animationsEnabled ? '0.5s' : '0s';
-            video.style.transition = `opacity ${animDur} ease`;
+            video.style.transition = 'none';
 
             // Apply blur filter
             const blur = settings.blurIntensity || 0;
@@ -60,14 +58,20 @@
             video.src = playbackSrc;
             video.onloadeddata = () => {
                 video.style.opacity = '1';
+                if (settings.animationsEnabled && video.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    video.animate([{ opacity: 0 }, { opacity: 1 }], {
+                        duration: 420, easing: 'ease-out'
+                    });
+                }
                 video.play().catch(() => {});
             };
         });
     }
 
     // Listen for storage changes to auto-update
-    chrome.storage.onChanged.addListener(() => {
-        loadVideo();
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local') return;
+        if (['imageUrl', 'imageDataUrl', 'mediaType'].some(key => key in changes)) loadVideo();
     });
 
     // Listen for messages from content script

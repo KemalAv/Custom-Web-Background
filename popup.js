@@ -2,11 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- UI Elements ---
     const enabledCheckbox = document.getElementById('enabledCheckbox');
     const animationsCheckbox = document.getElementById('animationsCheckbox');
-    const protectModalsCheckbox = document.getElementById('protectModalsCheckbox');
     const autoTextColorCheckbox = document.getElementById('autoTextColorCheckbox');
-    const ignoreElementBgCheckbox = document.getElementById('ignoreElementBgCheckbox');
-    const ignoreElementBgSection = document.getElementById('ignoreElementBgSection');
-    const protectModalsSection = document.getElementById('protectModalsSection');
     const settingsPanel = document.getElementById('settings-panel');
     const imageUploadInput = document.getElementById('imageUpload');
     const uploadButton = document.getElementById('uploadButton');
@@ -39,15 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const defaults = {
             isEnabled: true,
             animationsEnabled: false,
-            protectModals: false,
             autoTextColor: false,
-            ignoreElementBg: false,
-            uiMode: 'chroma',
-            imageName: 'Using default image.',
+            imageName: 'Built-in background',
             imageDataUrl: null,
-            imageUrl: 'https://images2.alphacoders.com/137/1375140.png',
-            dimLevel: 0.4,
-            dimColor: 'black',
+            imageUrl: 'icons/background.png',
+            dimLevel: 0.5,
+            dimColor: 'auto',
             customDimColor: '#000000',
             blurIntensity: 0,
             mediaType: 'image'
@@ -56,17 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.local.get(defaults, (settings) => {
             enabledCheckbox.checked = settings.isEnabled;
             animationsCheckbox.checked = settings.animationsEnabled;
-            protectModalsCheckbox.checked = settings.protectModals;
             autoTextColorCheckbox.checked = settings.autoTextColor;
-            ignoreElementBgCheckbox.checked = settings.ignoreElementBg;
             dimLevelInput.value = settings.dimLevel;
             blurSlider.value = settings.blurIntensity;
             imageUrlInput.value = settings.imageUrl || '';
             currentImageNameSpan.textContent = settings.imageName;
-
-            // Set UI Mode radio button
-            const uiModeRadio = document.querySelector(`input[name="uiMode"][value="${settings.uiMode}"]`);
-            if (uiModeRadio) uiModeRadio.checked = true;
 
             // Migrate the old dark/light values without breaking existing users.
             const normalizedDimColor = settings.dimColor === 'dark'
@@ -82,8 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleCustomDimColorVisibility();
             toggleSettingsPanel();
             toggleAnimations();
-            toggleProtectModalsVisibility();
-            toggleIgnoreElementBgVisibility();
 
             // Auto apply default URL if set and no uploaded image
             if (settings.imageUrl && !settings.imageDataUrl) {
@@ -100,10 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * Save current UI settings to chrome.storage.
      */
     const saveSettings = () => {
-        const uiModeChecked = document.querySelector('input[name="uiMode"]:checked');
         const dimColorChecked = document.querySelector('input[name="dimColor"]:checked');
 
-        if (!uiModeChecked || !dimColorChecked) {
+        if (!dimColorChecked) {
             showStatus('Error: UI options not selected.');
             return;
         }
@@ -111,10 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const settings = {
             isEnabled: enabledCheckbox.checked,
             animationsEnabled: animationsCheckbox.checked,
-            protectModals: protectModalsCheckbox.checked,
             autoTextColor: autoTextColorCheckbox.checked,
-            ignoreElementBg: ignoreElementBgCheckbox.checked,
-            uiMode: uiModeChecked.value,
             dimLevel: parseFloat(dimLevelInput.value),
             blurIntensity: parseInt(blurSlider.value, 10),
             dimColor: dimColorChecked.value,
@@ -203,21 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     const toggleAnimations = () => {
         document.body.classList.toggle('animations-enabled', animationsCheckbox.checked);
-    };
-
-    /**
-     * Toggle Protect Modals section visibility based on UI mode.
-     */
-    const toggleProtectModalsVisibility = () => {
-        // Protect Modals is now supported in both Chroma and Glass modes
-        protectModalsSection.style.display = 'flex';
-    };
-
-    /**
-     * Toggle Ignore Element Background sub-option visibility based on Auto Text Color.
-     */
-    const toggleIgnoreElementBgVisibility = () => {
-        ignoreElementBgSection.style.display = autoTextColorCheckbox.checked ? 'block' : 'none';
     };
 
     /**
@@ -365,7 +331,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     enabledCheckbox.addEventListener('change', toggleSettingsPanel);
     animationsCheckbox.addEventListener('change', toggleAnimations);
-    autoTextColorCheckbox.addEventListener('change', toggleIgnoreElementBgVisibility);
     uploadButton.addEventListener('click', () => imageUploadInput.click());
     imageUploadInput.addEventListener('change', handleImageUpload);
     applyUrlButton.addEventListener('click', applyImageUrl);
@@ -374,9 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
     customDimColorInput.addEventListener('input', updateUIValues);
     document.querySelectorAll('input[name="dimColor"]').forEach(radio => {
         radio.addEventListener('change', toggleCustomDimColorVisibility);
-    });
-    document.querySelectorAll('input[name="uiMode"]').forEach(radio => {
-        radio.addEventListener('change', toggleProtectModalsVisibility);
     });
     saveButton.addEventListener('click', saveSettings);
     helpButton.addEventListener('click', openGuide);

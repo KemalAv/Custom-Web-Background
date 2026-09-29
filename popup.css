@@ -430,3 +430,6 @@ body.animations-enabled input[type="url"]:focus {
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: 12px;
 }
+
+.mode-hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--text-secondary); }
+.radio-group { flex-wrap: wrap; }

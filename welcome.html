@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -21,14 +21,55 @@
 
     <main id="top">
         <section class="hero">
-            <div class="success-pill"><span aria-hidden="true">&#10003;</span> Extension installed successfully</div>
+            <div class="success-pill"><span aria-hidden="true">&#10003;</span> Glass UI is on by default</div>
             <h1>Your favorite wallpaper,<br><span>on every website.</span></h1>
             <p class="hero-copy">Transform the web with your own image, GIF, or video. Follow these three simple steps to get started.</p>
             <div class="hero-actions">
-                <a class="primary-action" href="#how-to-use">See how to use it <span aria-hidden="true">&darr;</span></a>
+                <a class="primary-action" href="#try-it">Try the live preview <span aria-hidden="true">&darr;</span></a>
                 <button id="openExtensionButton" class="secondary-action" type="button">Open extension</button>
             </div>
             <p id="openExtensionHint" class="action-hint" role="status" aria-live="polite"></p>
+        </section>
+
+        <section id="try-it" class="demo-section" aria-labelledby="demoTitle">
+            <div class="section-heading">
+                <p class="eyebrow">TRY IT HERE</p>
+                <h2 id="demoTitle">Explore the effect</h2>
+                <p>This preview is for learning. Changes here do not modify your browser settings.</p>
+            </div>
+            <div class="demo-layout">
+                <div class="demo-stage" id="demoStage" aria-label="Glass UI preview">
+                    <div class="demo-wallpaper" id="demoWallpaper" aria-hidden="true"><span class="demo-sun"></span><span class="demo-hill hill-one"></span><span class="demo-hill hill-two"></span></div>
+                    <div class="demo-dim" id="demoDim" aria-hidden="true"></div>
+                    <div class="demo-glass">
+                        <span class="demo-kicker">GLASS UI PREVIEW</span>
+                        <h3>Wallpaper stays visible.</h3>
+                        <p>Page panels become translucent while important controls stay clear.</p>
+                        <button type="button" class="demo-button" id="demoButton">A sample button</button>
+                    </div>
+                </div>
+                <div class="demo-panel">
+                    <h3>Adjust the preview</h3>
+                    <label for="demoBlur">Wallpaper blur <output id="demoBlurValue">0 px</output></label>
+                    <input type="range" id="demoBlur" min="0" max="30" value="0">
+                    <label for="demoDimRange">Wallpaper dim <output id="demoDimValue">50%</output></label>
+                    <input type="range" id="demoDimRange" min="0" max="100" step="5" value="50">
+                    <p class="demo-note">Large panels and navigation use 5 px glass blur. Small text surfaces stay sharp.</p>
+                    <fieldset class="demo-colors"><legend>Overlay color</legend>
+                        <label><input type="radio" name="demoColor" value="auto" checked> Auto</label>
+                        <label><input type="radio" name="demoColor" value="black"> Black</label>
+                        <label><input type="radio" name="demoColor" value="white"> White</label>
+                        <label><input type="radio" name="demoColor" value="custom"> Custom</label>
+                    </fieldset>
+                    <div class="demo-custom-color" id="demoCustomColorRow" hidden>
+                        <label for="demoCustomColor">Choose a color</label>
+                        <input type="color" id="demoCustomColor" value="#6955b8">
+                        <output id="demoCustomColorValue" for="demoCustomColor">#6955B8</output>
+                    </div>
+                    <p class="demo-note" id="demoThemeNote" role="status">Auto follows your device theme.</p>
+                    <button class="demo-reset" type="button" id="demoReset">Reset preview</button>
+                </div>
+            </div>
         </section>
 
         <section id="how-to-use" class="guide-section" aria-labelledby="guideTitle">
@@ -51,7 +92,7 @@
                     <span class="step-label">STEP 02</span>
                     <div class="step-icon" aria-hidden="true">&#9788;</div>
                     <h3>Customize its appearance</h3>
-                    <p>Choose <strong>Chroma Key</strong> for simple transparency or <strong>Glass UI</strong> for a glass effect.</p>
+                    <p>Glass UI gives page backgrounds a translucent finish while keeping buttons and inputs clear. Adjust <strong>Blur</strong> and <strong>Dim</strong>; <strong>Auto</strong> chooses a white or black overlay from your device theme.</p>
                     <div class="mini-controls" aria-hidden="true">
                         <span>Blur</span><i><b class="blur-fill"></b></i>
                         <span>Dim</span><i><b class="dim-fill"></b></i>
@@ -61,7 +102,7 @@
                     <span class="step-label">STEP 03</span>
                     <div class="step-icon" aria-hidden="true">&#10003;</div>
                     <h3>Apply &amp; save</h3>
-                    <p>Click <strong>Apply &amp; Save</strong>. Refresh the website tab if the changes are not immediately visible.</p>
+                    <p>Click <strong>Apply &amp; Save</strong>. The extension starts with 0 px blur and 50% dim. Refresh a website tab if the effect is not immediately visible.</p>
                     <div class="fake-save">Apply &amp; Save</div>
                 </li>
             </ol>
@@ -73,10 +114,14 @@
                 <h2 id="featureTitle">Make every page comfortable to view</h2>
             </div>
             <div class="feature-grid">
-                <article><span aria-hidden="true">&#9672;</span><div><h3>Background Blur</h3><p>Softens wallpaper details so the content stays in focus.</p></div></article>
-                <article><span aria-hidden="true">&#9680;</span><div><h3>Background Dim</h3><p>Adjusts the brightness level over the wallpaper.</p></div></article>
-                <article><span aria-hidden="true">Aa</span><div><h3>Auto Correct Text</h3><p>Adjusts text colors so they remain easy to read.</p></div></article>
-                <article><span aria-hidden="true">&#9635;</span><div><h3>Protect Modals</h3><p>Protects menus and dialogs from becoming transparent.</p></div></article>
+                <article><span aria-hidden="true">▧</span><div><h3>Image, GIF &amp; MP4</h3><p>Upload a file or paste a direct media URL to choose your wallpaper.</p></div></article>
+                <article><span aria-hidden="true">◈</span><div><h3>Glass UI</h3><p>Translucent page surfaces reveal the wallpaper while controls remain usable.</p></div></article>
+                <article><span aria-hidden="true">◌</span><div><h3>Blur &amp; Dim</h3><p>Blur softens the wallpaper; dim adds a black, white, or custom color overlay.</p></div></article>
+                <article><span aria-hidden="true">◐</span><div><h3>Auto theme color</h3><p>Auto uses black on dark devices and white on light devices, following theme changes.</p></div></article>
+                <article><span aria-hidden="true">Aa</span><div><h3>Correct Text Color</h3><p>Optional text correction helps neutral text remain legible on the chosen background.</p></div></article>
+                <article><span aria-hidden="true">▣</span><div><h3>Readable popups</h3><p>Dialogs, menus, forms, and floating panels keep their original backgrounds automatically.</p></div></article>
+                <article><span aria-hidden="true">↗</span><div><h3>UI Animations</h3><p>Controls can have gentle hover motion. The wallpaper fades in once when it changes or you navigate, without zooming or pulsing.</p></div></article>
+                <article><span aria-hidden="true">⏻</span><div><h3>Quick on/off</h3><p>Disable the effect from the popup without deleting your wallpaper or settings.</p></div></article>
             </div>
         </section>
 

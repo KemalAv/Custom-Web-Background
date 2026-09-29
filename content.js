@@ -2,21 +2,45 @@
     const BG_CONTAINER_ID = 'universal-bg-container';
     const STYLE_TAG_ID = 'universal-bg-styles';
     const GLASS_STYLE_ID = 'glass-style';
-    const SAFE_ATTR = 'data-safe-chroma';
+    const SAFE_ATTR = 'data-wallpaper-protected';
     const isTopFrame = window.self === window.top;
 
     let currentSettings = {};
     let bgContainer, bgImage, bgVideo, bgOverlay, styleTag;
     let mutationObserver = null;
-    let lastMode = null;
     let pendingHeavyLoad = false;
     let pendingLoadTimer = null;
     let lastLoadedSrc = '';
+    let lastRequestedSrc = '';
+    let lastRequestedType = '';
     let lastLoadedName = '';
     let lastLoadedLength = 0;
     let pageSpinner = null;
     let loadSessionId = 0;
     let currentBlobUrl = null;
+    let lastRouteUrl = location.href;
+    const originalTextColors = new WeakMap();
+
+    function setTextColor(el, color) {
+        if (!originalTextColors.has(el)) {
+            originalTextColors.set(el, {
+                value: el.style.getPropertyValue('color'),
+                priority: el.style.getPropertyPriority('color')
+            });
+        }
+        el.style.setProperty('color', color, 'important');
+        el.setAttribute('data-glass-color', color);
+    }
+
+    function restoreTextColor(el) {
+        const original = originalTextColors.get(el);
+        if (original) {
+            if (original.value) el.style.setProperty('color', original.value, original.priority);
+            else el.style.removeProperty('color');
+            originalTextColors.delete(el);
+        }
+        el.removeAttribute('data-glass-color');
+    }
 
     /** ==================== HELPERS ==================== */
     function fetchSettings(callback) {
@@ -25,10 +49,7 @@
             chrome.storage.local.get(null, (settings) => {
                 currentSettings = settings || {};
                 currentSettings.isEnabled = currentSettings.isEnabled ?? true;
-                currentSettings.uiMode = currentSettings.uiMode || 'chroma';
-                currentSettings.protectModals = currentSettings.protectModals ?? false;
                 currentSettings.autoTextColor = currentSettings.autoTextColor ?? false;
-                currentSettings.ignoreElementBg = currentSettings.ignoreElementBg ?? false;
                 currentSettings.animationsEnabled = currentSettings.animationsEnabled ?? false;
                 currentSettings.mediaType = currentSettings.mediaType || 'image';
                 callback?.();
@@ -67,7 +88,10 @@
     }
 
     function getDimColorRgb() {
-        const dimColor = currentSettings.dimColor || 'black';
+        const dimColor = currentSettings.dimColor || 'auto';
+        if (dimColor === 'auto') {
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? [0, 0, 0] : [255, 255, 255];
+        }
         if (dimColor === 'white' || dimColor === 'light') return [255, 255, 255];
         if (dimColor === 'custom') {
             const match = /^#([0-9a-f]{6})$/i.exec(currentSettings.customDimColor || '');
@@ -99,7 +123,7 @@
             Object.assign(bgContainer.style, {
                 position: 'fixed', top: 0, left: 0,
                 width: '100vw', height: '100vh',
-                zIndex: '-2147483647', pointerEvents: 'none',
+                zIndex: '-1', pointerEvents: 'none',
                 overflow: 'hidden', opacity: 0,
                 transition: 'none',
             });
@@ -196,6 +220,8 @@
                 if (bgImage) { bgImage.src = ''; bgImage.style.opacity = '0'; }
                 if (bgVideo) { bgVideo.removeAttribute('src'); bgVideo.style.opacity = '0'; }
                 lastLoadedSrc = '';
+                lastRequestedSrc = '';
+                lastRequestedType = '';
                 lastLoadedName = '';
                 lastLoadedLength = 0;
                 if (currentBlobUrl) {
@@ -208,302 +234,119 @@
         document.querySelectorAll('*').forEach(el => {
             el.removeAttribute('data-bg-color');
             el.removeAttribute(SAFE_ATTR);
+            el.removeAttribute(SURFACE_ATTR);
             if (el.hasAttribute('data-glass-color')) {
-                el.style.removeProperty('color');
-                el.removeAttribute('data-glass-color');
+                restoreTextColor(el);
             }
         });
     }
 
-    /** ==================== CHROMA MODE ==================== */
-    function applyChromaBase() {
-        const dimLevel = parseFloat(currentSettings.dimLevel ?? 0.4);
-        const bgColor = getDimColorCss(dimLevel);
+    /** Surfaces that can display the glass effect. */
+    const SURFACE_ATTR = 'data-wallpaper-surface';
+    const CONTROL_SELECTOR = [
+        'button', 'input', 'select', 'textarea', 'option', 'label', 'summary',
+        'a', 'video', 'audio', 'img', 'svg', 'canvas', 'iframe', 'picture',
+        '[contenteditable]:not([contenteditable="false"])', '[onclick]',
+        '[role="button"]', '[role="link"]', '[role="tab"]', '[role="checkbox"]',
+        '[role="switch"]', '[role="textbox"]', '[role="combobox"]',
+        '[role="menuitem"]', '[role="option"]', '[role="slider"]',
+        '[role="progressbar"]', '[role="img"]'
+    ].join(',');
+    const MODAL_SELECTOR = [
+        'dialog', '[role="dialog"]', '[role="alertdialog"]', '[role="menu"]',
+        '[role="listbox"]', '[role="tooltip"]', '[role="popover"]',
+        '[aria-modal="true"]', '.modal', '.popup', '.dropdown', '.popover',
+        '.toast', '.notification', '[data-radix-portal]', '[data-headlessui-portal]',
+        '[data-tippy-root]', '[data-popover]', '[data-modal]'
+    ].join(',');
 
-        const animStyles = currentSettings.animationsEnabled ? `
-        button, .btn, .button, [role="button"], 
-        input[type="submit"], input[type="button"], input[type="reset"],
-        [role="tab"], [role="link"], a, summary, select {
-            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                        box-shadow 0.2s ease, 
-                        background-color 0.2s ease,
-                        filter 0.2s ease;
-        }
-        button:hover, .btn:hover, .button:hover, [role="button"]:hover,
-        input[type="submit"]:hover, input[type="button"]:hover,
-        [role="tab"]:hover, [role="link"]:hover, a:hover, summary:hover {
-            transform: translateY(-2px) scale(1.02);
-            filter: brightness(1.1);
-        }
-        button:active, .btn:active, .button:active, [role="button"]:active,
-        input[type="submit"]:active, input[type="button"]:active,
-        [role="tab"]:active, [role="link"]:active, a:active, summary:active {
-            transform: translateY(0) scale(0.98);
-            filter: brightness(0.9);
-        }
-        ` : '';
-
-        const popupAnim = currentSettings.animationsEnabled ? `
-        @keyframes slideInUp {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        [role="dialog"], [role="menu"], .popup, .modal, .dropdown, .overlay, [aria-modal="true"] {
-            animation: slideInUp 0.2s ease-out forwards;
-        }
-        ` : '';
-
-        const newContent = `
-        [data-bg-color], body {
-            background: transparent !important;
-            background-color: transparent !important;
-            background-image: none !important;
-        }
-
-        /* Add transparency effects to popups/dialogs/modals/menus only when protection is disabled */
-        ${currentSettings.protectModals ? '' : `
-        [role="dialog"]:not([${SAFE_ATTR}]),
-        [role="menu"]:not([${SAFE_ATTR}]),
-        [role="menuitem"]:not([${SAFE_ATTR}]),
-        [role="combobox"]:not([${SAFE_ATTR}]),
-        [role="listbox"]:not([${SAFE_ATTR}]),
-        [role="option"]:not([${SAFE_ATTR}]),
-        [role="alertdialog"]:not([${SAFE_ATTR}]),
-        [role="popover"]:not([${SAFE_ATTR}]),
-        dialog:not([${SAFE_ATTR}]),
-        aside:not([${SAFE_ATTR}]),
-        .popup:not([${SAFE_ATTR}]),
-        .modal:not([${SAFE_ATTR}]),
-        .dropdown:not([${SAFE_ATTR}]),
-        .overlay:not([${SAFE_ATTR}]),
-        [aria-modal="true"]:not([${SAFE_ATTR}]),
-        [aria-expanded="true"]:not([${SAFE_ATTR}]) {
-            background-color: ${bgColor} !important;
-            backdrop-filter: blur(${currentSettings.blurIntensity || 8}px) !important;
-            border-radius: 12px !important;
-        }
-        `}
-        ${animStyles}
-        ${popupAnim}
-        `;
-
-        if (styleTag && styleTag.textContent !== newContent) {
-            styleTag.textContent = newContent;
-        }
+    function isProtectedSurface(el) {
+        if (el.closest('#' + BG_CONTAINER_ID) || el.closest('.universal-spinner')) return true;
+        if (el.closest(`[${SAFE_ATTR}]`)) return true;
+        if (el.matches(CONTROL_SELECTOR) || el.closest(CONTROL_SELECTOR)) return true;
+        if (el.matches(MODAL_SELECTOR) || el.closest(MODAL_SELECTOR)) return true;
+        if (el.matches('form, [role="search"]') ||
+            el.closest('form, [role="search"]')) return true;
+        return false;
     }
 
-    function safeTagElements(root) {
+    function isNavigationSurface(el) {
+        const name = `${el.id} ${typeof el.className === 'string' ? el.className : ''}`.toLowerCase();
+        return el.matches('header, nav, [role="banner"], [role="navigation"], ytd-masthead, ytd-guide-renderer') ||
+            /(?:^|[\s_-])(appheader|masthead|header|navbar|navigation|topbar|sidebar|guide)(?:[\s_-]|$)/.test(name);
+    }
+
+    function isForegroundLayer(el, css, rect) {
+        if (el === document.body || el === document.documentElement) return false;
+        const name = `${el.id} ${typeof el.className === 'string' ? el.className : ''}`.toLowerCase();
+        if (/(?:^|[\s_-])(composer|modal|dialog|popover|dropdown|tooltip|toast|portal|drawer)(?:[\s_-]|$)/.test(name)) return true;
+        // Persistent navigation is part of the page surface, even when sticky.
+        if (isNavigationSurface(el)) return false;
+        // Preserve foreground UI, such as floating editors and menus.
+        if (css.position === 'fixed' || css.position === 'sticky') return true;
+        const zIndex = Number.parseInt(css.zIndex, 10);
+        return css.position === 'absolute' && zIndex > 0 && rect.width > 80 && rect.height > 30;
+    }
+
+    function isGlassPanel(el, rect) {
+        if (el === document.body || el === document.documentElement) return false;
+        if (rect.width < 100 || rect.height < 44) return false;
+        // Keep full-page canvases clear so the wallpaper remains visible.
+        if (rect.width > window.innerWidth * 0.96 && rect.height > window.innerHeight * 0.9) return false;
+        // A single glass layer on a branch avoids compounded blur and dark tint.
+        if (el.parentElement?.closest(`[${SURFACE_ATTR}="glass"], [${SURFACE_ATTR}="frosted"]`)) return false;
+        // Include site panels as well as generic backgrounds in modern layouts.
+        return true;
+    }
+
+    function shouldBlurSurface(el, rect, css) {
+        if (isNavigationSurface(el)) return true;
+        // Blur behind spacious containers, never behind compact text snippets
+        // or inline search-result elements that may overlap other text.
+        if (rect.width < 180 || rect.height < 80) return false;
+        if (/^(inline|contents|table-row|table-cell)/.test(css.display)) return false;
+        if (/^(SPAN|P|SMALL|STRONG|EM|MARK|CODE|PRE|LI|H[1-6])$/.test(el.tagName)) return false;
+        return true;
+    }
+
+    function tagSurfaces(root = document.body) {
         if (!root) return;
-        const protectModals = currentSettings.protectModals ?? true;
-
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-            acceptNode(node) {
-                if (node.id === BG_CONTAINER_ID || node.closest('#' + BG_CONTAINER_ID)) return NodeFilter.FILTER_REJECT;
-                if (node.hasAttribute(SAFE_ATTR)) return NodeFilter.FILTER_REJECT;
-                if (node.hasAttribute('data-bg-color')) return NodeFilter.FILTER_REJECT;
-
-                // Propagate protection: if any ancestor is marked safe, reject this node
-                if (node.closest('[' + SAFE_ATTR + ']')) return NodeFilter.FILTER_REJECT;
-
-                // NEW: Tight UI Layer Protection
-                if (protectModals) {
-                    try {
-                        const style = window.getComputedStyle(node);
-
-                        // 1. Position Check (Mutlak skip fixed, sticky, absolute)
-                        const pos = style.position;
-                        if (pos === 'fixed' || pos === 'sticky' || pos === 'absolute') return NodeFilter.FILTER_REJECT;
-
-                        // 2. Strict Z-Index Check (Z > 0 dianggap layer UI)
-                        const z = style.zIndex;
-                        if (z !== 'auto' && parseInt(z) > 0) return NodeFilter.FILTER_REJECT;
-
-                        // 3. Deep Tag Name & Role Check
-                        const tag = node.tagName.toLowerCase();
-                        if (tag === 'dialog' || tag === 'aside') return NodeFilter.FILTER_REJECT;
-
-                        const role = node.getAttribute('role')?.toLowerCase() || '';
-                        const protectedRoles = ['dialog', 'menu', 'menuitem', 'combobox', 'listbox', 'option', 'alertdialog', 'popover', 'tooltip', 'status', 'alert'];
-                        if (protectedRoles.includes(role)) return NodeFilter.FILTER_REJECT;
-
-                        // 4. Box-Shadow & Drop-Shadow & Backdrop-Filter checks
-                        if ((style.boxShadow && style.boxShadow !== 'none') ||
-                            (style.filter && style.filter.includes('drop-shadow')) ||
-                            (style.backdropFilter && style.backdropFilter !== 'none') ||
-                            (style.webkitBackdropFilter && style.webkitBackdropFilter !== 'none')) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-
-                        // 5. Large Viewport Overlay detection
-                        const width = node.offsetWidth || 0;
-                        const height = node.offsetHeight || 0;
-                        if ((pos === 'fixed' || pos === 'absolute') && width > window.innerWidth * 0.9 && height > window.innerHeight * 0.9) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-
-                        // 6. Deep Keyword Search (ID & Class)
-                        const id = node.id?.toLowerCase() || '';
-                        const className = (typeof node.className === 'string' ? node.className : '').toLowerCase();
-                        const uiKeywords = [
-                            'modal', 'popup', 'dialog', 'swal', 'portal', 'popper', 'wrapper', 'banner', 'tooltip', 'notify', 'alert', 'layer', 'panel', 'overlay', 'mask', 'drawer',
-                            'dropdown', 'menu', 'combobox', 'select', 'popover', 'lightbox', 'toast', 'notification', 'sidebar', 'sheet', 'flyout', 'fixed', 'window', 'backdrop', 'shield', 'cover',
-                            'tip', 'hint', 'balloon', 'bubble', 'alertdialog', 'picker', 'datepicker', 'calendar', 'autocomplete', 'dropdown-menu', 'modal-content', 'modal-dialog'
-                        ];
-
-                        if (uiKeywords.some(key => id.includes(key) || className.includes(key))) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-
-                        // 7. Portal, Headless UI, & State Check
-                        if (node.hasAttribute('data-radix-portal') ||
-                            node.hasAttribute('data-headlessui-portal') ||
-                            node.hasAttribute('aria-haspopup') ||
-                            node.hasAttribute('aria-expanded') ||
-                            node.getAttribute('aria-expanded') === 'true' ||
-                            node.getAttribute('data-state')?.includes('open') ||
-                            node.hasAttribute('data-tippy-root') ||
-                            node.hasAttribute('data-popover') ||
-                            node.hasAttribute('data-modal')) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-                    } catch (e) { }
-                }
-
-                return NodeFilter.FILTER_ACCEPT;
+        // Keep existing surface attributes in place. Removing and re-adding
+        // them on every chat mutation causes a visible background flash.
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+        let el;
+        while ((el = walker.nextNode())) {
+            if (isProtectedSurface(el)) continue;
+            const rect = el.getBoundingClientRect();
+            if (rect.width < 48 || rect.height < 28) continue;
+            const css = getComputedStyle(el);
+            // Sites often render avatars and artwork as CSS background images.
+            // Keep those surfaces and their children exactly as the site draws them.
+            if (/(?:url\(|(?:-webkit-)?image-set\()/i.test(css.backgroundImage)) {
+                el.setAttribute(SAFE_ATTR, '');
+                continue;
             }
-        });
-        while (walker.nextNode()) {
-            const el = walker.currentNode;
-            try {
-                const style = getComputedStyle(el);
-                const bg = style.backgroundColor;
-                const bgImg = style.backgroundImage;
-
-                // Protect elements with gradients or background images
-                if (bgImg && bgImg !== 'none') continue;
-
-                if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
-                    // Avoid tagging very small elements (icons, badges, etc)
-                    if (el.offsetWidth < 30 || el.offsetHeight < 30) continue;
-
-                    const nums = bg.match(/\d+/g);
-                    if (!nums || nums.length < 3) continue;
-                    const rgb = nums.slice(0, 3).map(Number);
-
-                    // Only process neutral colors (whites, blacks, greys)
-                    if (!isNeutralColor(rgb)) continue;
-
-                    const [r, g, b] = rgb;
-                    const hex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-                    el.setAttribute('data-bg-color', hex.toLowerCase());
-                }
-            } catch { }
+            if (isForegroundLayer(el, css, rect)) {
+                el.setAttribute(SAFE_ATTR, '');
+                continue;
+            }
+            const hasBackground = css.backgroundImage !== 'none' ||
+                (css.backgroundColor !== 'transparent' && css.backgroundColor !== 'rgba(0, 0, 0, 0)');
+            if (!hasBackground && el !== document.body) continue;
+            const surface = isGlassPanel(el, rect)
+                ? (shouldBlurSurface(el, rect, css) ? 'frosted' : 'glass') : 'clear';
+            el.setAttribute(SURFACE_ATTR, surface);
         }
     }
 
-    function markSafeElements() {
-        // 1. Static Rules (High-level containers)
-        document.querySelectorAll('#masthead-container, ytd-masthead, #search, ytd-searchbox, #guide, ytd-guide-renderer, #sections, #contents a, tp-yt-paper-item, #end, .ytp-chrome-top, .ytp-chrome-bottom, #searchform, #gb, #hplogo, .gb_uc, .top-bar')
-            .forEach(el => el.setAttribute(SAFE_ATTR, 'true'));
-
-        // 2. Functional Rules (Buttons, inputs, etc)
-        document.querySelectorAll('header, nav, footer, button, [type="submit"], [role="button"], [role="menu"], [role="dialog"], [role="alert"], [role="status"], [role="tooltip"], [role="banner"], [role="navigation"], [role="menuitem"], [role="combobox"], [role="listbox"], [role="option"], [role="alertdialog"], [role="popover"], dialog, aside, input, select, textarea, a, [onclick], [tabindex], .btn, .button, .badge, .label, .tag, .toast, .alert, .modal, .popup, .dropdown, .card-header, .card-footer, img, video, svg, canvas, iframe, .swal2-container, .swal-overlay, .modal-backdrop, .MuiDialog-root, .MuiPopover-root, .MuiMenu-root, .flatpickr-calendar, .ui-datepicker, .select2-container, [id*="portal"], [id*="popper"], [class*="portal"], [class*="popper"], [data-radix-portal], [data-headlessui-portal], [aria-haspopup], [aria-expanded], [data-state], [data-tippy-root], [data-popover], [data-modal]')
-            .forEach(el => el.setAttribute(SAFE_ATTR, 'true'));
-
-        // 3. Dynamic UI Protection (Strict Check)
-        const protectModals = currentSettings.protectModals ?? false;
-        const uiKeywords = [
-            'modal', 'popup', 'dialog', 'swal', 'portal', 'popper', 'wrapper', 'banner', 'tooltip', 'notify', 'alert', 'layer', 'panel', 'overlay', 'mask', 'drawer',
-            'dropdown', 'menu', 'combobox', 'select', 'popover', 'lightbox', 'toast', 'notification', 'sidebar', 'sheet', 'flyout', 'fixed', 'window', 'backdrop', 'shield', 'cover',
-            'tip', 'hint', 'balloon', 'bubble', 'alertdialog', 'picker', 'datepicker', 'calendar', 'autocomplete', 'dropdown-menu', 'modal-content', 'modal-dialog'
-        ];
-
-        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
-            acceptNode(node) {
-                if (node.hasAttribute(SAFE_ATTR)) return NodeFilter.FILTER_SKIP;
-
-                // Small elements (icons, badges, etc) should never be transparent/glass
-                if (node.offsetWidth > 0 && node.offsetHeight > 0 && (node.offsetWidth < 32 || node.offsetHeight < 32)) {
-                    return NodeFilter.FILTER_ACCEPT;
-                }
-
-                if (protectModals) {
-                    try {
-                        const style = window.getComputedStyle(node);
-                        const pos = style.position;
-                        const z = style.zIndex;
-
-                        // Position check
-                        if (pos === 'fixed' || pos === 'sticky' || pos === 'absolute') return NodeFilter.FILTER_ACCEPT;
-                        // Z-Index check (Z > 0 considered UI layer)
-                        if (z !== 'auto' && parseInt(z) > 0) return NodeFilter.FILTER_ACCEPT;
-
-                        // Tag & Role check
-                        const tag = node.tagName.toLowerCase();
-                        if (tag === 'dialog' || tag === 'aside') return NodeFilter.FILTER_ACCEPT;
-
-                        const role = node.getAttribute('role')?.toLowerCase() || '';
-                        const protectedRoles = ['dialog', 'menu', 'menuitem', 'combobox', 'listbox', 'option', 'alertdialog', 'popover', 'tooltip', 'status', 'alert'];
-                        if (protectedRoles.includes(role)) return NodeFilter.FILTER_ACCEPT;
-
-                        // Box-Shadow & Drop-Shadow & Backdrop-Filter checks
-                        if ((style.boxShadow && style.boxShadow !== 'none') ||
-                            (style.filter && style.filter.includes('drop-shadow')) ||
-                            (style.backdropFilter && style.backdropFilter !== 'none') ||
-                            (style.webkitBackdropFilter && style.webkitBackdropFilter !== 'none')) {
-                            return NodeFilter.FILTER_ACCEPT;
-                        }
-
-                        // Large Viewport Overlay detection
-                        const width = node.offsetWidth || 0;
-                        const height = node.offsetHeight || 0;
-                        if ((pos === 'fixed' || pos === 'absolute') && width > window.innerWidth * 0.9 && height > window.innerHeight * 0.9) {
-                            return NodeFilter.FILTER_ACCEPT;
-                        }
-
-                        // Keyword check
-                        const id = node.id?.toLowerCase() || '';
-                        const className = (typeof node.className === 'string' ? node.className : '').toLowerCase();
-                        if (uiKeywords.some(key => id.includes(key) || className.includes(key))) return NodeFilter.FILTER_ACCEPT;
-
-                        // Portal & State check
-                        if (node.hasAttribute('data-radix-portal') ||
-                            node.hasAttribute('data-headlessui-portal') ||
-                            node.hasAttribute('aria-haspopup') ||
-                            node.hasAttribute('aria-expanded') ||
-                            node.getAttribute('aria-expanded') === 'true' ||
-                            node.getAttribute('data-state')?.includes('open') ||
-                            node.hasAttribute('data-tippy-root') ||
-                            node.hasAttribute('data-popover') ||
-                            node.hasAttribute('data-modal')) {
-                            return NodeFilter.FILTER_ACCEPT;
-                        }
-                    } catch (e) { }
-                }
-                return NodeFilter.FILTER_SKIP;
-            }
-        });
-
-        while (walker.nextNode()) {
-            walker.currentNode.setAttribute(SAFE_ATTR, 'true');
-        }
-
-        // Clean up data-bg-color from any element that has data-safe-chroma or is a child of one
-        if (protectModals) {
-            document.querySelectorAll(`[${SAFE_ATTR}], [${SAFE_ATTR}] *`).forEach(el => {
-                el.removeAttribute('data-bg-color');
-            });
-        }
-    }
-
-    /** ==================== GLASS MODE ==================== */
+    /** ==================== GLASS UI ==================== */
     function isNeutralColor(rgbArray) {
         const [r, g, b] = rgbArray.map(v => v / 255);
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
         const delta = max - min;
         const saturation = max === 0 ? 0 : delta / max;
-        return saturation < 0.2; // neutral threshold (stricter to avoid recoloring colored text)
+        return saturation < 0.28; // include muted gray text while leaving vivid links and accents intact
     }
 
     function getEffectiveBackgroundColor(el) {
@@ -514,7 +357,7 @@
                 const bg = style.backgroundColor;
                 if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
                     const rgba = bg.match(/[\d.]+/g)?.map(Number);
-                    if (rgba && (rgba.length < 4 || rgba[3] > 0.5)) {
+                    if (rgba && (rgba.length < 4 || rgba[3] > 0.35)) {
                         return rgba;
                     }
                 }
@@ -526,213 +369,92 @@
 
     function applyTextColorCorrection() {
         if (!currentSettings.autoTextColor) {
-            // Cleanup if disabled
-            document.querySelectorAll('[data-glass-color]').forEach(el => {
-                el.style.removeProperty('color');
-                el.removeAttribute('data-glass-color');
-            });
+            document.querySelectorAll('[data-glass-color]').forEach(restoreTextColor);
             return;
         }
 
-        const useLightText = isDimColorDark();
-        const ignoreElementBg = currentSettings.ignoreElementBg ?? false;
-
-        document.querySelectorAll(`body *:not(img):not(video):not(svg):not(iframe):not(canvas)`).forEach(el => {
+        const lightTextOnWallpaper = isDimColorDark();
+        document.querySelectorAll('body *:not(img):not(video):not(svg):not(iframe):not(canvas)').forEach(el => {
             try {
-                // Skip if this is only an image/video/empty container
+                if (el.matches(CONTROL_SELECTOR) ||
+                    el.closest('button, a, label, [role="button"], [' + SAFE_ATTR + ']')) {
+                    if (el.hasAttribute('data-glass-color')) restoreTextColor(el);
+                    return;
+                }
                 if (el.children.length === 0 && !el.textContent.trim()) return;
+                const rgb = getComputedStyle(el).color.match(/\d+/g)?.slice(0, 3).map(Number);
+                if (!rgb || rgb.length !== 3 || !isNeutralColor(rgb)) return;
 
-                const style = getComputedStyle(el);
-                const currentColor = style.color;
-                const rgb = currentColor.match(/\d+/g)?.map(Number);
-                if (!rgb || rgb.length < 3) return;
-
-                // Only process neutrally colored text (white, black, gray)
-                if (!isNeutralColor(rgb)) return;
-
-                // === IGNORE ELEMENT BACKGROUND MODE ===
-                // When ignoreElementBg is ON, always force text color based on dim overlay,
-                // completely ignoring the element's own background color.
-                if (ignoreElementBg) {
-                    if (useLightText) {
-                        if (el.getAttribute('data-glass-color') !== 'white') {
-                            el.style.setProperty('color', 'white', 'important');
-                            el.setAttribute('data-glass-color', 'white');
-                        }
-                    } else {
-                        if (el.getAttribute('data-glass-color') !== 'black') {
-                            el.style.setProperty('color', 'black', 'important');
-                            el.setAttribute('data-glass-color', 'black');
-                        }
-                    }
-                    return;
-                }
-
-                // === NORMAL MODE: respect element background ===
-                const bgRgba = getEffectiveBackgroundColor(el);
-                let bgLuminance = 1; // Default to bright (white)
-                let isOpaque = false;
-
-                if (bgRgba) {
-                    const bgAlpha = bgRgba.length === 4 ? bgRgba[3] : 1;
-                    if (bgAlpha > 0.5) {
-                        isOpaque = true;
-                        const [br, bg_g, bb] = bgRgba;
-                        bgLuminance = (0.299 * br + 0.587 * bg_g + 0.114 * bb) / 255;
-                    }
-                }
-
-                // Rule 1: Text on DARK icons/backgrounds must be WHITE (for contrast)
-                if (isOpaque && bgLuminance < 0.35) {
-                    if (el.getAttribute('data-glass-color') !== 'white') {
-                        el.style.setProperty('color', 'white', 'important');
-                        el.setAttribute('data-glass-color', 'white');
-                    }
-                    return;
-                }
-
-                // Rule 2: Dark overlays use light text.
-                if (useLightText) {
-                    // Force text to white unless it is over an already bright background
-                    if (isOpaque && bgLuminance > 0.65) {
-                        if (el.hasAttribute('data-glass-color')) {
-                            el.style.removeProperty('color');
-                            el.removeAttribute('data-glass-color');
-                        }
-                    } else {
-                        if (el.getAttribute('data-glass-color') !== 'white') {
-                            el.style.setProperty('color', 'white', 'important');
-                            el.setAttribute('data-glass-color', 'white');
-                        }
-                    }
-                    return;
-                }
-
-                // Rule 3: Bright overlays use dark text.
-                if (!useLightText) {
-                    // Force text to black unless it is over a sufficiently dark background
-                    if (isOpaque && bgLuminance < 0.5) {
-                        if (el.hasAttribute('data-glass-color')) {
-                            el.style.removeProperty('color');
-                            el.removeAttribute('data-glass-color');
-                        }
-                    } else {
-                        if (el.getAttribute('data-glass-color') !== 'black') {
-                            el.style.setProperty('color', 'black', 'important');
-                            el.setAttribute('data-glass-color', 'black');
-                        }
-                    }
-                    return;
-                }
-
+                const bg = getEffectiveBackgroundColor(el);
+                const hasPanel = bg && (bg.length < 4 || bg[3] > 0.35);
+                const panelLuminance = hasPanel
+                    ? (0.299 * bg[0] + 0.587 * bg[1] + 0.114 * bg[2]) / 255 : null;
+                const target = (hasPanel ? panelLuminance < 0.54 : lightTextOnWallpaper)
+                    ? 'white' : 'black';
+                if (el.getAttribute('data-glass-color') !== target) setTextColor(el, target);
             } catch { }
         });
     }
 
     function applyGlassStep() {
-        const { blurIntensity = 8 } = currentSettings;
-        // Scale down dimLevel for Glass UI so it's less brutal (100% slider = 25% opacity)
-        const dimLevel = parseFloat(currentSettings.dimLevel ?? 0.4) * 0.25;
-        const bgColor = getDimColorCss(dimLevel);
-
-        const animStyles = currentSettings.animationsEnabled ? `
-            button, .btn, .button, [role="button"], 
-            input[type="submit"], input[type="button"], input[type="reset"],
-            [role="tab"], [role="link"], a, summary, select {
-                transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                            box-shadow 0.2s ease, 
-                            background-color 0.2s ease,
-                            filter 0.2s ease;
+        const [r, g, b] = getDimColorRgb();
+        const tint = `rgba(${r},${g},${b},0.75)`;
+        const css = `
+            html, body {
+                background-color: transparent !important;
             }
-            button:hover, .btn:hover, .button:hover, [role="button"]:hover,
-            input[type="submit"]:hover, input[type="button"]:hover,
-            [role="tab"]:hover, [role="link"]:hover, a:hover, summary:hover {
-                transform: translateY(-2px) scale(1.02);
-                filter: brightness(1.1);
+            [${SURFACE_ATTR}] {
+                background-color: transparent !important;
+                background-image: none !important;
             }
-            button:active, .btn:active, .button:active, [role="button"]:active,
-            input[type="submit"]:active, input[type="button"]:active,
-            [role="tab"]:active, [role="link"]:active, a:active, summary:active {
-                transform: translateY(0) scale(0.98);
-                filter: brightness(0.9);
+            [${SURFACE_ATTR}="glass"], [${SURFACE_ATTR}="frosted"] {
+                background-color: ${tint} !important;
             }
-        ` : '';
-
-        const popupAnim = currentSettings.animationsEnabled ? `
-            @keyframes slideInUp {
-                from { opacity: 0; transform: translateY(8px); }
-                to { opacity: 1; transform: translateY(0); }
+            [${SURFACE_ATTR}="frosted"] {
+                -webkit-backdrop-filter: blur(5px) saturate(135%);
+                backdrop-filter: blur(5px) saturate(135%);
             }
-            [role="dialog"], [role="menu"], .popup, .modal, .dropdown, .overlay, [aria-modal="true"] {
-                animation: slideInUp 0.2s ease-out forwards;
+            @media (prefers-reduced-motion: no-preference) {
+                ${currentSettings.animationsEnabled ? `button, [role="button"] { transition: transform .18s ease; }
+                button:hover, [role="button"]:hover { transform: translateY(-1px); }` : ''}
             }
-        ` : '';
-
-        const glassTag = document.getElementById(GLASS_STYLE_ID);
-        const newContent = `
-            *:not([${SAFE_ATTR}]):not([${SAFE_ATTR}] *):not(img):not(video):not(svg):not(canvas):not(iframe) { 
-                background-color: ${bgColor} !important; 
-                border-radius: 12px !important; 
-            }
-            body { border-radius: 0 !important; }
-
-            /* Protected Elements override (only if not already glass) */
-            [${SAFE_ATTR}] {
-                backdrop-filter: none !important;
-            }
-
-            [role="dialog"], [role="menu"], [role="menuitem"], [role="combobox"], [role="listbox"], [role="option"], [role="alertdialog"], [role="popover"], dialog, aside, .popup, .modal, .dropdown, .overlay, [aria-modal="true"], [aria-expanded="true"] {
-                ${currentSettings.protectModals ? '' : `
-                    background-color: ${bgColor} !important;
-                    backdrop-filter: blur(${blurIntensity}px) !important;
-                `}
-            }
-            ${animStyles}
-            ${popupAnim}
         `;
-        if (glassTag && glassTag.textContent !== newContent) {
-            glassTag.textContent = newContent;
-        }
+        const glassTag = document.getElementById(GLASS_STYLE_ID);
+        if (glassTag && glassTag.textContent !== css) glassTag.textContent = css;
     }
 
     /** ==================== APPLY ==================== */
     function apply(forceReset = true) {
         initStyleTags();
 
-        if (!currentSettings.isEnabled) { resetEffects(true); lastMode = null; return; }
+        if (!currentSettings.isEnabled) { resetEffects(true); return; }
 
-        // Mode switch or forced: reset tagging but keep media to avoid flicker/re-load
-        if (forceReset || currentSettings.uiMode !== lastMode) {
+        // Reset tagging without reloading media.
+        if (forceReset) {
             resetEffects(false);
         }
 
         // Always apply transparency logic immediately. 
         // We don't wait for heavy files anymore to ensure the user knows it's working.
-        markSafeElements();
+        tagSurfaces();
 
-        if (currentSettings.uiMode === 'glass') {
-            applyGlassStep();
-        } else {
-            applyChromaBase();
-            safeTagElements(document.body);
-        }
+        applyGlassStep();
 
         applyTextColorCorrection();
 
-        lastMode = currentSettings.uiMode;
 
         if (!isTopFrame) return;
         initContainer();
 
-        const imgSrc = currentSettings.imageUrl || currentSettings.imageDataUrl || '';
+        const rawSrc = currentSettings.imageUrl || currentSettings.imageDataUrl || '';
+        const imgSrc = rawSrc === 'icons/background.png'
+            ? chrome.runtime.getURL('icons/background.png') : rawSrc;
         const imgName = currentSettings.imageName || '';
         const imgLen = imgSrc.length;
-        const animDur = currentSettings.animationsEnabled ? '0.5s' : '0s';
-        const transStyle = `opacity ${animDur} ease`;
-        bgContainer.style.transition = transStyle;
-        bgImage.style.transition = transStyle;
-        bgVideo.style.transition = transStyle;
-        if (bgOverlay) bgOverlay.style.transition = transStyle;
+        bgContainer.style.transition = 'none';
+        bgImage.style.transition = 'none';
+        bgVideo.style.transition = 'none';
+        if (bgOverlay) bgOverlay.style.transition = 'none';
 
         bgContainer.style.opacity = '1';
 
@@ -743,9 +465,12 @@
 
         if (imgSrc) {
             const isHeavy = imgLen > 10000000;
-            const hasChanged = (imgLen !== lastLoadedLength) || (imgName !== lastLoadedName);
+            const hasChanged = imgSrc !== lastRequestedSrc ||
+                currentSettings.mediaType !== lastRequestedType;
 
             if (hasChanged) {
+                lastRequestedSrc = imgSrc;
+                lastRequestedType = currentSettings.mediaType;
                 lastLoadedLength = imgLen;
                 lastLoadedName = imgName;
                 const currentSession = ++loadSessionId;
@@ -774,23 +499,21 @@
                     // The iframe page reads video data from chrome.storage internally
                     try {
                         const videoPageUrl = chrome.runtime.getURL('video-bg.html');
-                        if (!bgVideo.src || !bgVideo.src.includes('video-bg.html')) {
-                            bgVideo.src = videoPageUrl;
-                        }
-                        // Notify iframe to reload video from storage
-                        bgVideo.onload = () => {
+                        const showVideo = () => {
                             if (loadSessionId === currentSession) {
                                 lastLoadedSrc = imgSrc;
                                 pendingHeavyLoad = false;
                                 if (pageSpinner) pageSpinner.classList.remove('visible');
                                 clearTimeout(pendingLoadTimer);
                                 bgVideo.style.opacity = '1';
-                                // Tell the iframe to load video
-                                setTimeout(() => {
-                                    bgVideo.contentWindow?.postMessage({ type: 'update-video' }, '*');
-                                }, 100);
                             }
                         };
+                        if (!bgVideo.src || !bgVideo.src.includes('video-bg.html')) {
+                            bgVideo.onload = showVideo;
+                            bgVideo.src = videoPageUrl;
+                        } else {
+                            showVideo(); // video-bg.js observes media changes in storage
+                        }
                     } catch (e) {
                         console.error('Video iframe setup failed:', e);
                     }
@@ -807,10 +530,17 @@
 
                     bgImage.onerror = () => {
                         if (loadSessionId === currentSession) {
+                            // An older installation may not have the new bundled image yet.
+                            const fallback = 'https://images2.alphacoders.com/137/1375140.png';
+                            if (rawSrc === 'icons/background.png' && bgImage.src !== fallback) {
+                                bgImage.src = fallback;
+                                return;
+                            }
                             pendingHeavyLoad = false;
                             pageSpinner?.classList.remove('visible');
                             lastLoadedLength = 0;
                             lastLoadedName = '';
+                            lastRequestedSrc = '';
                         }
                     };
                     bgImage.onload = () => {
@@ -820,6 +550,7 @@
                             if (pageSpinner) pageSpinner.classList.remove('visible');
                             clearTimeout(pendingLoadTimer);
                             bgImage.style.opacity = '1';
+                            animateBackground(bgImage);
                         }
                     };
                     bgImage.src = playbackSrc;
@@ -843,22 +574,38 @@
         }
         if (bgOverlay) {
             bgOverlay.style.backgroundColor = getDimColorCss();
-            bgOverlay.style.opacity = parseFloat(currentSettings.dimLevel ?? 0);
+            bgOverlay.style.opacity = parseFloat(currentSettings.dimLevel ?? 0.5);
         }
+    }
+
+    function animateBackground(media, from = 0) {
+        if (!currentSettings.animationsEnabled || !media?.animate ||
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        media.animate([{ opacity: from }, { opacity: 1 }], {
+            duration: 420, easing: 'ease-out'
+        });
+    }
+
+    function refreshRoute() {
+        if (location.href === lastRouteUrl) return;
+        lastRouteUrl = location.href;
+        fetchSettings(() => {
+            apply(false);
+            if (isTopFrame) {
+                const activeMedia = bgVideo?.style.opacity === '1' ? bgVideo : bgImage;
+                if (activeMedia?.style.opacity === '1') animateBackground(activeMedia, 0.72);
+            }
+        });
     }
 
     /** ==================== OBSERVER ==================== */
     const debouncedApply = debounce(() => {
         if (!currentSettings.isEnabled) return;
 
-        // Always refresh safe tags first to ensure persistence
-        markSafeElements();
+        // Refresh surfaces added or restyled by single-page applications.
+        tagSurfaces();
 
-        if (currentSettings.uiMode === 'glass') {
-            applyGlassStep();
-        } else {
-            safeTagElements(document.body);
-        }
+        applyGlassStep();
 
         applyTextColorCorrection();
     }, 250);
@@ -892,7 +639,11 @@
                 if (mutation.type === 'attributes') {
                     if (mutation.attributeName === 'data-glass-color' ||
                         mutation.attributeName === 'data-bg-color' ||
+                        mutation.attributeName === SURFACE_ATTR ||
                         mutation.attributeName === SAFE_ATTR) continue;
+                    if (mutation.target.hasAttribute('data-glass-color') ||
+                        mutation.target.hasAttribute(SURFACE_ATTR) ||
+                        mutation.target.hasAttribute(SAFE_ATTR)) continue;
                     shouldUpdate = true; break;
                 }
             }
@@ -928,23 +679,15 @@
 
             // 2. Secondary check for text colors (especially for SPAs)
             // We don't do a full 'apply(true)' to avoid flicker, just a refresh
-            if (currentSettings.uiMode === 'glass') {
-                applyGlassStep();
-            } else {
-                markSafeElements();
-                safeTagElements(document.body);
-            }
+            tagSurfaces();
+            applyGlassStep();
 
             applyTextColorCorrection();
         }, 3000); // Pulse every 3 seconds
 
         // URL Change detection for SPAs that don't trigger pushState correctly
-        let lastUrl = location.href;
         setInterval(() => {
-            if (location.href !== lastUrl) {
-                lastUrl = location.href;
-                setTimeout(() => fetchSettings(() => apply(true)), 500);
-            }
+            if (location.href !== lastRouteUrl) setTimeout(refreshRoute, 500);
         }, 1000);
     }
 
@@ -968,13 +711,17 @@
             const orig = history[fn];
             history[fn] = function (...args) {
                 const res = orig.apply(this, args);
-                setTimeout(() => fetchSettings(() => apply(true)), 200);
+                setTimeout(refreshRoute, 200);
                 return res;
             };
         });
 
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (currentSettings.dimColor === 'auto') apply(false);
+        });
+
         window.addEventListener('popstate', () => {
-            setTimeout(() => fetchSettings(() => apply(true)), 200);
+            setTimeout(refreshRoute, 200);
         });
     }
 

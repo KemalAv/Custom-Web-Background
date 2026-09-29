@@ -23,6 +23,8 @@
             </div>
         </header>
 
+        <p class="mode-hint">Semi-transparent Glass UI is enabled by default.</p>
+
         <main id="settings-panel">
 
             <section class="form-group">
@@ -32,35 +34,10 @@
                 </div>
             </section>
 
-            <section class="form-group" id="protectModalsSection">
-                <div class="toggle-switch">
-                    <label for="protectModalsCheckbox" style="font-weight: normal;">Protect Modals & Popups</label>
-                    <input type="checkbox" id="protectModalsCheckbox">
-                </div>
-            </section>
-
             <section class="form-group">
                 <div class="toggle-switch">
-                    <label for="autoTextColorCheckbox" style="font-weight: normal;">Auto Correct Text Color</label>
+                    <label for="autoTextColorCheckbox" style="font-weight: normal;">Correct Text Color</label>
                     <input type="checkbox" id="autoTextColorCheckbox" checked>
-                </div>
-                <div class="sub-option" id="ignoreElementBgSection" style="display: none;">
-                    <div class="toggle-switch sub-toggle">
-                        <label for="ignoreElementBgCheckbox" style="font-weight: normal; font-size: 12px;">Ignore Element Background</label>
-                        <input type="checkbox" id="ignoreElementBgCheckbox">
-                    </div>
-                    <div style="font-size: 11px; color: #888; margin-top: 2px; padding-left: 4px;">When ON, text color always follows dim overlay mode, ignoring dark/light element backgrounds.</div>
-                </div>
-            </section>
-
-            <section class="form-group">
-                <label>UI Mode:</label>
-                <div class="radio-group" id="uiModeGroup">
-                    <label><input type="radio" name="uiMode" value="chroma" checked> Chroma Key (Default)</label>
-                    <label class="mode-option">
-                        <input type="radio" name="uiMode" value="glass">
-                        <span class="mode-label-text">Glass UI (Beta)</span>
-                    </label>
                 </div>
             </section>
 
@@ -71,7 +48,7 @@
                 </div>
                 <input type="file" id="imageUpload" accept="image/jpeg,image/png,image/gif,video/mp4" hidden>
                 <button id="uploadButton" class="button-secondary">Choose File...</button>
-                <span id="currentImageName">Using default image.</span>
+                <span id="currentImageName">Built-in background</span>
             </section>
 
             <section class="form-group">
@@ -87,17 +64,19 @@
             </section>
 
             <section class="form-group">
-                <label for="dimLevel">Background Dim: <span id="dimValue">40%</span></label>
-                <input type="range" id="dimLevel" min="0" max="1" step="0.05" value="0.4">
+                <label for="dimLevel">Background Dim: <span id="dimValue">50%</span></label>
+                <input type="range" id="dimLevel" min="0" max="1" step="0.05" value="0.5">
             </section>
 
             <section class="form-group">
                 <label>Dim Overlay Color:</label>
                 <div class="radio-group" id="dimColorGroup">
-                    <label><input type="radio" name="dimColor" value="black" checked> Black</label>
+                    <label><input type="radio" name="dimColor" value="auto" checked> Auto</label>
+                    <label><input type="radio" name="dimColor" value="black"> Black</label>
                     <label><input type="radio" name="dimColor" value="white"> White</label>
                     <label><input type="radio" name="dimColor" value="custom"> Custom</label>
                 </div>
+                <p class="mode-hint">Auto follows your device theme: black for dark mode, white for light mode.</p>
                 <div class="custom-color-row" id="customDimColorSection" hidden>
                     <label for="customDimColor">Pick color</label>
                     <input type="color" id="customDimColor" value="#000000">
