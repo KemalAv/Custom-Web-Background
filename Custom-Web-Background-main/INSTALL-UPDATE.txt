@@ -1,0 +1,10 @@
+GLASS UI UPDATE — VERSION 3.70
+
+1. Use your ORIGINAL extension folder, which still contains the original logo at icons/icon128.png.
+2. Copy all files from this ZIP into that folder and replace files with matching names.
+3. Click Reload at chrome://extensions. For a fresh installation, select Load unpacked and choose the updated original folder.
+
+This ZIP intentionally does not include a replacement icon. Keep your existing icons folder.
+On a fresh installation, Glass UI is enabled with 0 px blur, 50% dim, and Auto overlay color. Existing saved preferences remain in place when updating.
+
+For the new built-in wallpaper, keep your image at icons/background.png in the original folder. This update does not include that file because it was not supplied. The extension falls back to the earlier remote wallpaper until you add it.

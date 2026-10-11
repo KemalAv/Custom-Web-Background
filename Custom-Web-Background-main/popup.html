@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Custom Web Background</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body class="animations-enabled">
+    <div class="container popup-animate-in">
+        <header>
+            <div class="header-title-row">
+                <h3>
+                    <span>Custom Web Background</span>
+                </h3>
+                <button id="helpButton" class="help-button" type="button" aria-label="Open the user guide"
+                    title="User guide">?</button>
+            </div>
+            <div class="toggle-switch">
+                <label for="enabledCheckbox">Enable Extension</label>
+                <input type="checkbox" id="enabledCheckbox" checked>
+            </div>
+        </header>
+
+        <main id="settings-panel">
+
+            <section class="form-group">
+                <div class="toggle-switch">
+                    <label for="extraTransparentCheckbox" style="font-weight: normal;">Extra Transparant</label>
+                    <input type="checkbox" id="extraTransparentCheckbox">
+                </div>
+                <p class="mode-hint">Enables extreme background transparency for cards and containers (previous Glass UI mode).</p>
+            </section>
+
+            <section class="form-group">
+                <label>Target Websites:</label>
+                <div class="radio-group" id="siteModeGroup">
+                    <label><input type="radio" name="siteMode" value="all" checked> All Websites</label>
+                    <label><input type="radio" name="siteMode" value="specific"> Specific Websites</label>
+                </div>
+                <div id="specificSitesSection" hidden style="margin-top: 6px;">
+                    <button type="button" id="addCurrentSiteButton" class="button-secondary" style="width: 100%; margin-bottom: 6px;">
+                        + Add Current Website
+                    </button>
+                    <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                        <input type="text" id="newSiteInput" placeholder="e.g. google.com" style="flex: 1; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+                        <button type="button" id="addSiteButton" class="button-secondary" style="padding: 6px 12px;">Add</button>
+                    </div>
+                    <div class="sites-header-row">
+                        <span class="sites-count-label">Websites (<span id="sitesCount">0</span>)</span>
+                    </div>
+                    <div id="sitesList" class="sites-list-box"></div>
+                    <p class="mode-hint" style="margin-top: 4px;">Wallpaper will only appear on these websites.</p>
+                </div>
+            </section>
+
+            <section class="form-group">
+                <div class="toggle-switch">
+                    <label for="animationsCheckbox" style="font-weight: normal;">Enable UI Animations</label>
+                    <input type="checkbox" id="animationsCheckbox" checked>
+                </div>
+            </section>
+
+            <section class="form-group">
+                <div class="toggle-switch">
+                    <label for="autoTextColorCheckbox" style="font-weight: normal;">Correct Text Color</label>
+                    <input type="checkbox" id="autoTextColorCheckbox" checked>
+                </div>
+            </section>
+
+            <section class="form-group">
+                <label>Background Media (JPG, PNG, GIF, MP4)</label>
+                <div class="video-note" style="font-size: 11px; margin-bottom: 6px; color: #666;">
+                    Supports images and MP4 video backgrounds.
+                </div>
+                <input type="file" id="imageUpload" accept="image/jpeg,image/png,image/gif,video/mp4" hidden>
+                <button id="uploadButton" class="button-secondary">Choose File...</button>
+                <span id="currentImageName">Built-in background</span>
+            </section>
+
+            <section class="form-group">
+                <label>Or Enter Media URL</label>
+                <input type="url" id="imageUrlInput" placeholder="https://example.com/image.jpg"
+                    style="width: 100%; margin-top: 6px; padding: 6px;">
+                <button id="applyUrlButton" class="button-secondary" style="margin-top: 6px;">Apply URL</button>
+            </section>
+
+            <section class="form-group">
+                <label for="blurSlider">Background Blur: <span id="blurValue">0px</span></label>
+                <input type="range" id="blurSlider" min="0" max="30" step="1" value="0">
+            </section>
+
+            <section class="form-group">
+                <label for="dimLevel">Background Dim: <span id="dimValue">50%</span></label>
+                <input type="range" id="dimLevel" min="0" max="1" step="0.05" value="0.5">
+            </section>
+
+            <section class="form-group">
+                <label>Dim Overlay Color:</label>
+                <div class="radio-group" id="dimColorGroup">
+                    <label><input type="radio" name="dimColor" value="auto" checked> Auto</label>
+                    <label><input type="radio" name="dimColor" value="black"> Black</label>
+                    <label><input type="radio" name="dimColor" value="white"> White</label>
+                    <label><input type="radio" name="dimColor" value="custom"> Custom</label>
+                </div>
+                <p class="mode-hint">Auto follows your device theme: black for dark mode, white for light mode.</p>
+                <div class="custom-color-row" id="customDimColorSection" hidden>
+                    <label for="customDimColor">Pick color</label>
+                    <input type="color" id="customDimColor" value="#000000">
+                    <output id="customDimColorValue" for="customDimColor">#000000</output>
+                </div>
+            </section>
+
+        </main>
+
+        <footer>
+            <button id="saveButton" class="button-primary">Apply & Save</button>
+            <div id="status"></div>
+            <p class="donate-link">
+                Gimmie your money please:
+                <a href="https://sociabuzz.com/kemalavicennafaza" target="_blank" rel="noopener noreferrer">
+                    sociabuzz.com/kemalavicennafaza
+                </a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
