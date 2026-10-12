@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="popup.css">
 </head>
 
-<body>
-    <div class="container">
+<body class="animations-enabled">
+    <div class="container popup-animate-in">
         <header>
             <div class="header-title-row">
                 <h3>
@@ -23,9 +23,37 @@
             </div>
         </header>
 
-        <p class="mode-hint">Semi-transparent Glass UI is enabled by default.</p>
-
         <main id="settings-panel">
+
+            <section class="form-group">
+                <div class="toggle-switch">
+                    <label for="extraTransparentCheckbox" style="font-weight: normal;">Extra Transparant</label>
+                    <input type="checkbox" id="extraTransparentCheckbox">
+                </div>
+                <p class="mode-hint">Enables extreme background transparency for cards and containers (previous Glass UI mode).</p>
+            </section>
+
+            <section class="form-group">
+                <label>Target Websites:</label>
+                <div class="radio-group" id="siteModeGroup">
+                    <label><input type="radio" name="siteMode" value="all" checked> All Websites</label>
+                    <label><input type="radio" name="siteMode" value="specific"> Specific Websites</label>
+                </div>
+                <div id="specificSitesSection" hidden style="margin-top: 6px;">
+                    <button type="button" id="addCurrentSiteButton" class="button-secondary" style="width: 100%; margin-bottom: 6px;">
+                        + Add Current Website
+                    </button>
+                    <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                        <input type="text" id="newSiteInput" placeholder="e.g. google.com" style="flex: 1; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+                        <button type="button" id="addSiteButton" class="button-secondary" style="padding: 6px 12px;">Add</button>
+                    </div>
+                    <div class="sites-header-row">
+                        <span class="sites-count-label">Websites (<span id="sitesCount">0</span>)</span>
+                    </div>
+                    <div id="sitesList" class="sites-list-box"></div>
+                    <p class="mode-hint" style="margin-top: 4px;">Wallpaper will only appear on these websites.</p>
+                </div>
+            </section>
 
             <section class="form-group">
                 <div class="toggle-switch">

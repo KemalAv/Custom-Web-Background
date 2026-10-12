@@ -19,6 +19,7 @@
     let loadSessionId = 0;
     let currentBlobUrl = null;
     let lastRouteUrl = location.href;
+    let hasAnimatedCurrentMedia = false;
     const originalTextColors = new WeakMap();
 
     function setTextColor(el, color) {
@@ -49,12 +50,33 @@
             chrome.storage.local.get(null, (settings) => {
                 currentSettings = settings || {};
                 currentSettings.isEnabled = currentSettings.isEnabled ?? true;
+                currentSettings.extraTransparent = currentSettings.extraTransparent ?? false;
+                currentSettings.siteMode = currentSettings.siteMode || 'all';
+                currentSettings.specificSites = currentSettings.specificSites || [];
                 currentSettings.autoTextColor = currentSettings.autoTextColor ?? false;
                 currentSettings.animationsEnabled = currentSettings.animationsEnabled ?? false;
                 currentSettings.mediaType = currentSettings.mediaType || 'image';
+                currentSettings.imageUrl = currentSettings.imageUrl || (currentSettings.imageDataUrl ? '' : 'icons/background.png');
                 callback?.();
             });
         } catch (e) { console.error(e); }
+    }
+
+    function isSiteAllowed() {
+        const siteMode = currentSettings.siteMode || 'all';
+        if (siteMode === 'all') return true;
+        if (siteMode === 'specific') {
+            const list = currentSettings.specificSites || [];
+            if (!Array.isArray(list) || list.length === 0) return false;
+            const currentHost = window.location.hostname.toLowerCase();
+            return list.some(item => {
+                if (!item) return false;
+                let clean = item.trim().toLowerCase().replace(/^(?:https?:\/\/)?(?:www\.)?/i, '').split('/')[0].split(':')[0];
+                if (!clean) return false;
+                return currentHost === clean || currentHost.endsWith('.' + clean);
+            });
+        }
+        return true;
     }
 
     function dataUrlToBlobUrl(dataUrl) {
@@ -87,12 +109,66 @@
         };
     }
 
+    function isPageDarkTheme() {
+        const html = document.documentElement;
+        const body = document.body;
+
+        // 1. YouTube specific dark attribute: <html dark> or <html dark="true">
+        if (html) {
+            if (html.hasAttribute('dark')) {
+                const val = html.getAttribute('dark');
+                if (val === '' || val === 'true' || val === 'dark') return true;
+                if (val === 'false') return false;
+            }
+        }
+
+        // 2. Explicit data-theme / data-color-mode / theme attributes
+        const themeAttr = (html?.getAttribute('data-theme') ||
+            body?.getAttribute('data-theme') ||
+            html?.getAttribute('data-color-mode') ||
+            body?.getAttribute('data-color-mode') ||
+            html?.getAttribute('theme') ||
+            body?.getAttribute('theme') || '').toLowerCase();
+        if (themeAttr) {
+            if (/dark/i.test(themeAttr)) return true;
+            if (/light/i.test(themeAttr)) return false;
+        }
+
+        // 3. Class names containing dark or light theme
+        const classStr = `${html?.className || ''} ${body?.className || ''}`.toLowerCase();
+        if (/(?:^|\s)(?:dark|theme-dark|dark-theme|dark-mode|mode-dark)(?:\s|$)/.test(classStr)) return true;
+        if (/(?:^|\s)(?:light|theme-light|light-theme|light-mode|mode-light)(?:\s|$)/.test(classStr)) return false;
+
+        // 4. CSS color-scheme
+        try {
+            if (html) {
+                const cs = getComputedStyle(html).colorScheme;
+                if (cs === 'dark') return true;
+                if (cs === 'light') return false;
+            }
+        } catch (e) { }
+
+        // 5. Check computed text color of body (if text is light, page is dark; if text is dark, page is light)
+        try {
+            if (body) {
+                const bodyColor = getComputedStyle(body).color;
+                const rgb = bodyColor.match(/\d+/g)?.slice(0, 3).map(Number);
+                if (rgb && rgb.length === 3) {
+                    const lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+                    if (lum > 0.6) return true;
+                    if (lum < 0.4) return false;
+                }
+            }
+        } catch (e) { }
+
+        // 6. Fallback to system OS preferences
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
     function getDimColorRgb() {
         const dimColor = currentSettings.dimColor || 'auto';
-        if (dimColor === 'auto') {
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? [0, 0, 0] : [255, 255, 255];
-        }
         if (dimColor === 'white' || dimColor === 'light') return [255, 255, 255];
+        if (dimColor === 'black' || dimColor === 'dark') return [0, 0, 0];
         if (dimColor === 'custom') {
             const match = /^#([0-9a-f]{6})$/i.exec(currentSettings.customDimColor || '');
             if (match) {
@@ -103,7 +179,8 @@
                 ];
             }
         }
-        return [0, 0, 0];
+        // Auto: ikuti tema website (tema putih -> putih, tema hitam -> hitam)
+        return isPageDarkTheme() ? [0, 0, 0] : [255, 255, 255];
     }
 
     function getDimColorCss(alpha) {
@@ -117,6 +194,9 @@
     }
 
     function initContainer() {
+        const root = document.documentElement || document.body;
+        if (!root) return;
+
         if (!bgContainer) {
             bgContainer = document.createElement('div');
             bgContainer.id = BG_CONTAINER_ID;
@@ -158,36 +238,39 @@
             bgContainer.append(bgImage, bgVideo, bgOverlay);
         }
 
-        if (!document.documentElement.contains(bgContainer)) {
-            document.documentElement.prepend(bgContainer);
+        if (!root.contains(bgContainer)) {
+            root.prepend(bgContainer);
         }
 
         if (!pageSpinner) {
             pageSpinner = document.createElement('div');
             pageSpinner.className = 'universal-spinner';
         }
-        if (!document.documentElement.contains(pageSpinner)) {
-            document.documentElement.appendChild(pageSpinner);
+        if (!root.contains(pageSpinner)) {
+            root.appendChild(pageSpinner);
         }
     }
 
     function initStyleTags() {
+        const root = document.head || document.documentElement;
+        if (!root) return;
+
         styleTag = document.getElementById(STYLE_TAG_ID);
         if (!styleTag) {
             styleTag = document.createElement('style');
             styleTag.id = STYLE_TAG_ID;
-            document.head.appendChild(styleTag);
-        } else if (!document.head.contains(styleTag)) {
-            document.head.appendChild(styleTag);
+            root.appendChild(styleTag);
+        } else if (!root.contains(styleTag)) {
+            root.appendChild(styleTag);
         }
 
         let glassTag = document.getElementById(GLASS_STYLE_ID);
         if (!glassTag) {
             glassTag = document.createElement('style');
             glassTag.id = GLASS_STYLE_ID;
-            document.head.appendChild(glassTag);
-        } else if (!document.head.contains(glassTag)) {
-            document.head.appendChild(glassTag);
+            root.appendChild(glassTag);
+        } else if (!root.contains(glassTag)) {
+            root.appendChild(glassTag);
         }
 
         let spinnerStyles = document.getElementById('bg-spinner-styles');
@@ -204,9 +287,9 @@
                 .universal-spinner.visible { opacity: 1; }
                 @keyframes bg-spin { to { transform: rotate(360deg); } }
             `;
-            document.head.appendChild(spinnerStyles);
-        } else if (!document.head.contains(spinnerStyles)) {
-            document.head.appendChild(spinnerStyles);
+            root.appendChild(spinnerStyles);
+        } else if (!root.contains(spinnerStyles)) {
+            root.appendChild(spinnerStyles);
         }
     }
 
@@ -224,6 +307,7 @@
                 lastRequestedType = '';
                 lastLoadedName = '';
                 lastLoadedLength = 0;
+                hasAnimatedCurrentMedia = false;
                 if (currentBlobUrl) {
                     URL.revokeObjectURL(currentBlobUrl);
                     currentBlobUrl = null;
@@ -245,11 +329,10 @@
     const SURFACE_ATTR = 'data-wallpaper-surface';
     const CONTROL_SELECTOR = [
         'button', 'input', 'select', 'textarea', 'option', 'label', 'summary',
-        'a', 'video', 'audio', 'img', 'svg', 'canvas', 'iframe', 'picture',
-        '[contenteditable]:not([contenteditable="false"])', '[onclick]',
-        '[role="button"]', '[role="link"]', '[role="tab"]', '[role="checkbox"]',
-        '[role="switch"]', '[role="textbox"]', '[role="combobox"]',
-        '[role="menuitem"]', '[role="option"]', '[role="slider"]',
+        'video', 'audio', 'img', 'svg', 'canvas', 'iframe', 'picture',
+        '[contenteditable]:not([contenteditable="false"])',
+        '[role="checkbox"]', '[role="switch"]', '[role="textbox"]',
+        '[role="combobox"]', '[role="option"]', '[role="slider"]',
         '[role="progressbar"]', '[role="img"]'
     ].join(',');
     const MODAL_SELECTOR = [
@@ -262,11 +345,9 @@
 
     function isProtectedSurface(el) {
         if (el.closest('#' + BG_CONTAINER_ID) || el.closest('.universal-spinner')) return true;
-        if (el.closest(`[${SAFE_ATTR}]`)) return true;
-        if (el.matches(CONTROL_SELECTOR) || el.closest(CONTROL_SELECTOR)) return true;
+        // Don't turn native form controls or media elements into glass
+        if (el.matches(CONTROL_SELECTOR) || el.closest('button, select, textarea, option, summary, video, audio')) return true;
         if (el.matches(MODAL_SELECTOR) || el.closest(MODAL_SELECTOR)) return true;
-        if (el.matches('form, [role="search"]') ||
-            el.closest('form, [role="search"]')) return true;
         return false;
     }
 
@@ -285,14 +366,14 @@
         // Preserve foreground UI, such as floating editors and menus.
         if (css.position === 'fixed' || css.position === 'sticky') return true;
         const zIndex = Number.parseInt(css.zIndex, 10);
-        return css.position === 'absolute' && zIndex > 0 && rect.width > 80 && rect.height > 30;
+        return css.position === 'absolute' && zIndex > 10 && rect.width > 80 && rect.height > 30;
     }
 
     function isGlassPanel(el, rect) {
         if (el === document.body || el === document.documentElement) return false;
         if (rect.width < 100 || rect.height < 44) return false;
         // Keep full-page canvases clear so the wallpaper remains visible.
-        if (rect.width > window.innerWidth * 0.96 && rect.height > window.innerHeight * 0.9) return false;
+        if (rect.width > window.innerWidth * 0.95 && rect.height > window.innerHeight * 0.88) return false;
         // A single glass layer on a branch avoids compounded blur and dark tint.
         if (el.parentElement?.closest(`[${SURFACE_ATTR}="glass"], [${SURFACE_ATTR}="frosted"]`)) return false;
         // Include site panels as well as generic backgrounds in modern layouts.
@@ -309,33 +390,91 @@
         return true;
     }
 
+    function isMainPageContainer(el, rect) {
+        if (el === document.body || el === document.documentElement) return true;
+        if (/^(MAIN|YTD-APP|YTD-PAGE-MANAGER|YTD-BROWSE)$/i.test(el.tagName)) return true;
+        if (rect.width >= window.innerWidth * 0.8 && rect.height >= window.innerHeight * 0.6) {
+            const idOrClass = `${el.id} ${typeof el.className === 'string' ? el.className : ''}`.toLowerCase();
+            if (/(?:^|[\s_-])(app|root|main|page|wrapper|layout|container|content-wrapper|browse|content|feed|shell|canvas|view|columns|primary)(?:[\s_-]|$)/.test(idOrClass)) {
+                return true;
+            }
+            if (rect.width >= window.innerWidth * 0.92 && rect.height >= window.innerHeight * 0.85) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function isRootCanvasContainer(el, rect) {
+        if (el === document.body || el === document.documentElement) return true;
+        // Hanya container dasar paling luar (langsung di bawah body) yang mencakup layar penuh
+        if (rect.width >= window.innerWidth * 0.9 && rect.height >= window.innerHeight * 0.8) {
+            const tagName = el.tagName.toLowerCase();
+            const idOrClass = `${el.id} ${typeof el.className === 'string' ? el.className : ''}`.toLowerCase();
+            if (el.parentElement === document.body) {
+                if (tagName === 'ytd-app' || el.id === 'root' || el.id === 'app' || el.id === '__next') return true;
+                return /(?:^|[\s_-])(app|root|ytd-app|page-manager|layout|shell|__next)(?:[\s_-]|$)/.test(idOrClass);
+            }
+            // Canvas wrapper bertingkat pada SPA besar seperti YouTube
+            if (tagName === 'ytd-page-manager' || tagName === 'ytd-browse' || el.id === 'page-manager') {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function tagSurfaces(root = document.body) {
         if (!root) return;
-        // Keep existing surface attributes in place. Removing and re-adding
-        // them on every chat mutation causes a visible background flash.
+        // Keep existing surface attributes in place without unnecessary churn.
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
         let el;
         while ((el = walker.nextNode())) {
-            if (isProtectedSurface(el)) continue;
+            if (isProtectedSurface(el)) {
+                if (el.hasAttribute(SURFACE_ATTR)) el.removeAttribute(SURFACE_ATTR);
+                if (!el.hasAttribute(SAFE_ATTR)) el.setAttribute(SAFE_ATTR, '');
+                continue;
+            }
             const rect = el.getBoundingClientRect();
-            if (rect.width < 48 || rect.height < 28) continue;
+            if (rect.width < 48 || rect.height < 28) {
+                if (el.hasAttribute(SURFACE_ATTR)) el.removeAttribute(SURFACE_ATTR);
+                if (!el.hasAttribute(SAFE_ATTR)) el.setAttribute(SAFE_ATTR, '');
+                continue;
+            }
             const css = getComputedStyle(el);
             // Sites often render avatars and artwork as CSS background images.
             // Keep those surfaces and their children exactly as the site draws them.
             if (/(?:url\(|(?:-webkit-)?image-set\()/i.test(css.backgroundImage)) {
-                el.setAttribute(SAFE_ATTR, '');
+                if (el.hasAttribute(SURFACE_ATTR)) el.removeAttribute(SURFACE_ATTR);
+                if (!el.hasAttribute(SAFE_ATTR)) el.setAttribute(SAFE_ATTR, '');
                 continue;
             }
             if (isForegroundLayer(el, css, rect)) {
-                el.setAttribute(SAFE_ATTR, '');
+                if (el.hasAttribute(SURFACE_ATTR)) el.removeAttribute(SURFACE_ATTR);
+                if (!el.hasAttribute(SAFE_ATTR)) el.setAttribute(SAFE_ATTR, '');
                 continue;
             }
             const hasBackground = css.backgroundImage !== 'none' ||
                 (css.backgroundColor !== 'transparent' && css.backgroundColor !== 'rgba(0, 0, 0, 0)');
             if (!hasBackground && el !== document.body) continue;
-            const surface = isGlassPanel(el, rect)
-                ? (shouldBlurSurface(el, rect, css) ? 'frosted' : 'glass') : 'clear';
-            el.setAttribute(SURFACE_ATTR, surface);
+
+            const isMainContainer = isMainPageContainer(el, rect) || isRootCanvasContainer(el, rect);
+
+            if (isMainContainer) {
+                if (el.getAttribute(SURFACE_ATTR) !== 'clear') el.setAttribute(SURFACE_ATTR, 'clear');
+                if (el.hasAttribute(SAFE_ATTR)) el.removeAttribute(SAFE_ATTR);
+            } else if (isGlassPanel(el, rect)) {
+                const surface = shouldBlurSurface(el, rect, css) ? 'frosted' : 'glass';
+                if (el.getAttribute(SURFACE_ATTR) !== surface) el.setAttribute(SURFACE_ATTR, surface);
+                if (el.hasAttribute(SAFE_ATTR)) el.removeAttribute(SAFE_ATTR);
+            } else {
+                if (currentSettings.extraTransparent) {
+                    if (el.getAttribute(SURFACE_ATTR) !== 'clear') el.setAttribute(SURFACE_ATTR, 'clear');
+                    if (el.hasAttribute(SAFE_ATTR)) el.removeAttribute(SAFE_ATTR);
+                } else {
+                    if (el.hasAttribute(SURFACE_ATTR)) el.removeAttribute(SURFACE_ATTR);
+                    if (!el.hasAttribute(SAFE_ATTR)) el.setAttribute(SAFE_ATTR, '');
+                }
+            }
         }
     }
 
@@ -353,6 +492,10 @@
         let current = el;
         while (current && current !== document.body) {
             try {
+                if (current.getAttribute(SURFACE_ATTR) === 'clear' && !current.hasAttribute(SAFE_ATTR)) {
+                    current = current.parentElement;
+                    continue;
+                }
                 const style = getComputedStyle(current);
                 const bg = style.backgroundColor;
                 if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
@@ -377,7 +520,7 @@
         document.querySelectorAll('body *:not(img):not(video):not(svg):not(iframe):not(canvas)').forEach(el => {
             try {
                 if (el.matches(CONTROL_SELECTOR) ||
-                    el.closest('button, a, label, [role="button"], [' + SAFE_ATTR + ']')) {
+                    el.closest('button, a, label, [role="button"]')) {
                     if (el.hasAttribute('data-glass-color')) restoreTextColor(el);
                     return;
                 }
@@ -387,6 +530,7 @@
 
                 const bg = getEffectiveBackgroundColor(el);
                 const hasPanel = bg && (bg.length < 4 || bg[3] > 0.35);
+
                 const panelLuminance = hasPanel
                     ? (0.299 * bg[0] + 0.587 * bg[1] + 0.114 * bg[2]) / 255 : null;
                 const target = (hasPanel ? panelLuminance < 0.54 : lightTextOnWallpaper)
@@ -397,11 +541,20 @@
     }
 
     function applyGlassStep() {
+        const glassTag = document.getElementById(GLASS_STYLE_ID);
+        if (!glassTag) return;
+
         const [r, g, b] = getDimColorRgb();
-        const tint = `rgba(${r},${g},${b},0.75)`;
-        const css = `
+        let surfaceRules = '';
+
+        if (currentSettings.extraTransparent) {
+            // Mode Extra Transparant: versi sebelum update (EXTREME TRANSPARENT)
+            // Semua surface [data-wallpaper-surface] menjadi transparan tembus ke wallpaper
+            const tint = `rgba(${r},${g},${b},0.75)`;
+            surfaceRules = `
             html, body {
                 background-color: transparent !important;
+                background-image: none !important;
             }
             [${SURFACE_ATTR}] {
                 background-color: transparent !important;
@@ -409,37 +562,109 @@
             }
             [${SURFACE_ATTR}="glass"], [${SURFACE_ATTR}="frosted"] {
                 background-color: ${tint} !important;
+                background-image: none !important;
             }
             [${SURFACE_ATTR}="frosted"] {
                 -webkit-backdrop-filter: blur(5px) saturate(135%);
                 backdrop-filter: blur(5px) saturate(135%);
             }
+            [${SAFE_ATTR}],
+            [${SAFE_ATTR}] * {
+                -webkit-backdrop-filter: none !important;
+                backdrop-filter: none !important;
+            }
+            `;
+        } else {
+            // Mode Normal (seperti versi extra transparant sekarang):
+            // Glass UI elegan: panel-panel yang eligible menjadi semi-transparan dengan blur,
+            // container utama clear, dan elemen lain tetap normal/solid
+            const tint = `rgba(${r},${g},${b},0.75)`;
+            surfaceRules = `
+            html, body {
+                background-color: transparent !important;
+                background-image: none !important;
+            }
+            [${SURFACE_ATTR}="clear"]:not([${SAFE_ATTR}]) {
+                background-color: transparent !important;
+                background-image: none !important;
+            }
+            [${SURFACE_ATTR}="glass"]:not([${SAFE_ATTR}]),
+            [${SURFACE_ATTR}="frosted"]:not([${SAFE_ATTR}]) {
+                background-color: ${tint} !important;
+                background-image: none !important;
+            }
+            [${SURFACE_ATTR}="frosted"]:not([${SAFE_ATTR}]) {
+                -webkit-backdrop-filter: blur(5px) saturate(135%);
+                backdrop-filter: blur(5px) saturate(135%);
+            }
+            [${SAFE_ATTR}],
+            [${SAFE_ATTR}] * {
+                -webkit-backdrop-filter: none !important;
+                backdrop-filter: none !important;
+            }
+            `;
+        }
+
+        const css = `
+            ${surfaceRules}
             @media (prefers-reduced-motion: no-preference) {
-                ${currentSettings.animationsEnabled ? `button, [role="button"] { transition: transform .18s ease; }
-                button:hover, [role="button"]:hover { transform: translateY(-1px); }` : ''}
+                ${currentSettings.animationsEnabled ? `
+                button, [role="button"] { 
+                    transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.15), box-shadow 0.22s ease !important; 
+                }
+                button:hover, [role="button"]:hover { 
+                    transform: translateY(-2px) scale(1.03) !important; 
+                    box-shadow: 0 6px 16px rgba(0,0,0,0.18) !important;
+                }
+                button:active, [role="button"]:active { 
+                    transform: translateY(1px) scale(0.97) !important; 
+                }
+                /* Animasi entrance pop up dan modal di website: bounce proporsional & halus kembali ke posisi semula */
+                ${MODAL_SELECTOR} {
+                    animation: webPopupEntrance 0.45s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+                }
+                @keyframes webPopupEntrance {
+                    0% {
+                        opacity: 0;
+                        transform: scale(0.88) translateY(-18px);
+                        filter: blur(2px);
+                    }
+                    60% {
+                        opacity: 1;
+                        transform: scale(1.03) translateY(2px);
+                        filter: blur(0px);
+                    }
+                    82% {
+                        transform: scale(0.99) translateY(-1px);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: scale(1) translateY(0);
+                        filter: none;
+                    }
+                }` : ''}
             }
         `;
-        const glassTag = document.getElementById(GLASS_STYLE_ID);
-        if (glassTag && glassTag.textContent !== css) glassTag.textContent = css;
+        if (glassTag.textContent !== css) glassTag.textContent = css;
     }
 
     /** ==================== APPLY ==================== */
     function apply(forceReset = true) {
         initStyleTags();
 
-        if (!currentSettings.isEnabled) { resetEffects(true); return; }
+        if (!currentSettings.isEnabled || !isSiteAllowed()) {
+            resetEffects(true);
+            return;
+        }
 
         // Reset tagging without reloading media.
         if (forceReset) {
             resetEffects(false);
         }
 
-        // Always apply transparency logic immediately. 
-        // We don't wait for heavy files anymore to ensure the user knows it's working.
+        // Apply transparency and styling
         tagSurfaces();
-
         applyGlassStep();
-
         applyTextColorCorrection();
 
 
@@ -473,6 +698,7 @@
                 lastRequestedType = currentSettings.mediaType;
                 lastLoadedLength = imgLen;
                 lastLoadedName = imgName;
+                hasAnimatedCurrentMedia = false;
                 const currentSession = ++loadSessionId;
 
                 if (isHeavy) {
@@ -506,6 +732,10 @@
                                 if (pageSpinner) pageSpinner.classList.remove('visible');
                                 clearTimeout(pendingLoadTimer);
                                 bgVideo.style.opacity = '1';
+                                if (!hasAnimatedCurrentMedia) {
+                                    hasAnimatedCurrentMedia = true;
+                                    animateBackground(bgVideo);
+                                }
                             }
                         };
                         if (!bgVideo.src || !bgVideo.src.includes('video-bg.html')) {
@@ -550,7 +780,10 @@
                             if (pageSpinner) pageSpinner.classList.remove('visible');
                             clearTimeout(pendingLoadTimer);
                             bgImage.style.opacity = '1';
-                            animateBackground(bgImage);
+                            if (!hasAnimatedCurrentMedia) {
+                                hasAnimatedCurrentMedia = true;
+                                animateBackground(bgImage);
+                            }
                         }
                     };
                     bgImage.src = playbackSrc;
@@ -570,6 +803,9 @@
         if (bgVideo && bgVideo.contentWindow) {
             try {
                 bgVideo.contentWindow.postMessage({ type: 'set-filter', filter: blurFilter }, '*');
+                if (isVideoMedia && hasChanged) {
+                    bgVideo.contentWindow.postMessage({ type: 'update-video' }, '*');
+                }
             } catch (e) { }
         }
         if (bgOverlay) {
@@ -578,12 +814,34 @@
         }
     }
 
-    function animateBackground(media, from = 0) {
+    function animateBackground(media) {
         if (!currentSettings.animationsEnabled || !media?.animate ||
             window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        media.animate([{ opacity: from }, { opacity: 1 }], {
-            duration: 420, easing: 'ease-out'
+
+        try {
+            if (media.getAnimations) {
+                media.getAnimations().forEach(a => a.cancel());
+            }
+        } catch (e) { }
+
+        // Animasi reveal dengan bounce yang proporsional & smooth, lalu kembali normal ke posisi awal
+        const keyframes = [
+            { clipPath: 'circle(0% at 50% 50%)', transform: 'scale(1.12)', opacity: 0 },
+            { clipPath: 'circle(90% at 50% 50%)', transform: 'scale(1.02)', opacity: 1, offset: 0.52 },
+            { clipPath: 'circle(84% at 50% 50%)', transform: 'scale(1.04)', opacity: 1, offset: 0.74 },
+            { clipPath: 'circle(150% at 50% 50%)', transform: 'scale(1)', opacity: 1, offset: 1.0 }
+        ];
+
+        const anim = media.animate(keyframes, {
+            duration: 750,
+            easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            fill: 'forwards'
         });
+
+        anim.onfinish = () => {
+            media.style.clipPath = 'none';
+            media.style.transform = 'none';
+        };
     }
 
     function refreshRoute() {
@@ -591,22 +849,15 @@
         lastRouteUrl = location.href;
         fetchSettings(() => {
             apply(false);
-            if (isTopFrame) {
-                const activeMedia = bgVideo?.style.opacity === '1' ? bgVideo : bgImage;
-                if (activeMedia?.style.opacity === '1') animateBackground(activeMedia, 0.72);
-            }
         });
     }
 
     /** ==================== OBSERVER ==================== */
     const debouncedApply = debounce(() => {
-        if (!currentSettings.isEnabled) return;
+        if (!currentSettings.isEnabled || !isSiteAllowed()) return;
 
-        // Refresh surfaces added or restyled by single-page applications.
         tagSurfaces();
-
         applyGlassStep();
-
         applyTextColorCorrection();
     }, 250);
 
@@ -619,7 +870,7 @@
         }
 
         mutationObserver = new MutationObserver((mutations) => {
-            if (!currentSettings.isEnabled) return;
+            if (!currentSettings.isEnabled || !isSiteAllowed()) return;
 
             let shouldUpdate = false;
             for (let mutation of mutations) {
@@ -641,9 +892,6 @@
                         mutation.attributeName === 'data-bg-color' ||
                         mutation.attributeName === SURFACE_ATTR ||
                         mutation.attributeName === SAFE_ATTR) continue;
-                    if (mutation.target.hasAttribute('data-glass-color') ||
-                        mutation.target.hasAttribute(SURFACE_ATTR) ||
-                        mutation.target.hasAttribute(SAFE_ATTR)) continue;
                     shouldUpdate = true; break;
                 }
             }
@@ -657,7 +905,7 @@
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["class", "style", "id"]
+            attributeFilter: ["class", "style", "id", "dark", "data-theme", "data-color-mode", "theme", "color-scheme"]
         });
     }
 
@@ -666,7 +914,7 @@
     // This "pulse" ensures our critical elements stay alive and at the correct positions.
     function startPersistencePulse() {
         setInterval(() => {
-            if (!currentSettings.isEnabled) return;
+            if (!currentSettings.isEnabled || !isSiteAllowed()) return;
 
             // 1. Ensure Container & Styles are still in DOM and correctly placed
             initStyleTags();
@@ -677,11 +925,10 @@
                 }
             }
 
-            // 2. Secondary check for text colors (especially for SPAs)
+            // 2. Secondary check for styles
             // We don't do a full 'apply(true)' to avoid flicker, just a refresh
             tagSurfaces();
             applyGlassStep();
-
             applyTextColorCorrection();
         }, 3000); // Pulse every 3 seconds
 
@@ -697,12 +944,44 @@
             chrome.storage.onChanged.addListener(() => fetchSettings(() => apply(true)));
         }
 
-        if (document.readyState === "complete" || document.readyState === "interactive") {
-            fetchSettings(() => apply(true));
-        } else {
-            window.addEventListener("DOMContentLoaded", () => fetchSettings(() => apply(true)));
-            window.addEventListener("load", () => setTimeout(() => fetchSettings(() => apply(true)), 200));
+        if (chrome?.runtime?.onMessage) {
+            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+                if (message?.type === 'FORCE_APPLY_SETTINGS') {
+                    if (message.settings) {
+                        currentSettings = Object.assign({}, currentSettings, message.settings);
+                    }
+                    apply(true);
+                    sendResponse?.({ status: 'ok' });
+                }
+            });
         }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                fetchSettings(() => apply(false));
+            }
+        });
+
+        const runAutoApply = () => fetchSettings(() => apply(true));
+        const refreshDomEffects = () => {
+            if (currentSettings.isEnabled && isSiteAllowed()) {
+                tagSurfaces();
+                applyGlassStep();
+                applyTextColorCorrection();
+            }
+        };
+
+        if (document.readyState === "complete" || document.readyState === "interactive") {
+            runAutoApply();
+        } else {
+            window.addEventListener("DOMContentLoaded", runAutoApply);
+            window.addEventListener("load", () => setTimeout(runAutoApply, 100));
+        }
+
+        // Auto-refresh for dynamic SPAs and client-side rendered frameworks (React, Vue, Next.js, YouTube, etc.)
+        [250, 600, 1200, 2500].forEach(delay => {
+            setTimeout(refreshDomEffects, delay);
+        });
 
         observeDOM();
         startPersistencePulse();

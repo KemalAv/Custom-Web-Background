@@ -171,9 +171,20 @@ body {
     color: var(--ink);
 }
 
-.primary-action:hover,
+.primary-action:hover {
+    transform: translateY(-2.5px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(22, 119, 255, 0.35);
+}
+
 .secondary-action:hover {
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.02);
+    border-color: var(--blue);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.primary-action:active,
+.secondary-action:active {
+    transform: translateY(1px) scale(0.97);
 }
 
 .action-hint {

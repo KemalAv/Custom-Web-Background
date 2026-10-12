@@ -38,17 +38,38 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('input[name="demoColor"]').forEach(input => input.addEventListener('change', updatePreview));
     customColor.addEventListener('input', updatePreview);
     deviceTheme.addEventListener('change', updatePreview);
+    const demoWallpaper = document.getElementById('demoWallpaper');
+    function triggerDemoAnimation() {
+        if (!demoWallpaper?.animate) return;
+        const anim = demoWallpaper.animate([
+            { clipPath: 'circle(0% at 50% 50%)', transform: 'scale(1.12)', opacity: 0 },
+            { clipPath: 'circle(90% at 50% 50%)', transform: 'scale(1.02)', opacity: 1, offset: 0.52 },
+            { clipPath: 'circle(84% at 50% 50%)', transform: 'scale(1.04)', opacity: 1, offset: 0.74 },
+            { clipPath: 'circle(150% at 50% 50%)', transform: 'scale(1)', opacity: 1, offset: 1.0 }
+        ], {
+            duration: 750,
+            easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            fill: 'forwards'
+        });
+        anim.onfinish = () => {
+            demoWallpaper.style.clipPath = 'none';
+            demoWallpaper.style.transform = 'none';
+        };
+    }
+
     document.getElementById('demoReset').addEventListener('click', () => {
         blur.value = 0;
         dim.value = 50;
         customColor.value = '#6955b8';
         document.querySelector('input[name="demoColor"][value="auto"]').checked = true;
         updatePreview();
+        triggerDemoAnimation();
     });
     document.getElementById('demoButton').addEventListener('click', () => {
         hint.textContent = 'The preview button stays readable. Use the extension popup to apply real settings.';
     });
     updatePreview();
+    triggerDemoAnimation();
 
     openButton.addEventListener('click', async () => {
         try {
