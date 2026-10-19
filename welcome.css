@@ -498,13 +498,194 @@ footer {
 .hill-one { bottom: -25%; background: #3f8294; transform: rotate(-9deg); }
 .hill-two { bottom: -34%; background: #255b76; transform: rotate(12deg); }
 .demo-dim { z-index: -1; background: var(--demo-overlay, #000); opacity: var(--demo-opacity, .5); }
-.demo-glass { width: min(100%, 390px); padding: 28px; border: 1px solid rgba(255,255,255,.44); border-radius: 20px; background: var(--demo-panel-tint, rgba(255,255,255,.75)); box-shadow: 0 18px 50px rgba(0,0,0,.2); backdrop-filter: blur(5px) saturate(135%); -webkit-backdrop-filter: blur(5px) saturate(135%); color: #142537; }
-.demo-kicker { font-size: 10px; font-weight: 800; letter-spacing: .13em; }
-.demo-glass h3 { margin: 16px 0 8px; font-size: 26px; letter-spacing: -.03em; }
-.demo-glass p { line-height: 1.5; }
-.demo-dark .demo-glass { color: #f7fbff; }
-.demo-button { padding: 11px 15px; border: 0; border-radius: 10px; background: #125dab; color: white; font: inherit; font-weight: 700; }
-.demo-button:focus-visible, .demo-reset:focus-visible { outline: 3px solid #ffce71; outline-offset: 3px; }
+.demo-google-wrapper {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(100%, 460px);
+    gap: 16px;
+    text-align: center;
+}
+
+.demo-google-logo {
+    font-size: clamp(38px, 6vw, 52px);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    user-select: none;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+.g-blue { color: #4285F4; }
+.g-red { color: #EA4335; }
+.g-yellow { color: #FBBC05; }
+.g-green { color: #34A853; }
+
+.demo-google-search-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-radius: 28px;
+    background: var(--demo-panel-tint, rgba(255, 255, 255, 0.75));
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(5px) saturate(135%);
+    -webkit-backdrop-filter: blur(5px) saturate(135%);
+    color: var(--demo-text, #202124);
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.demo-dark .demo-google-search-bar {
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #f1f3f4;
+}
+
+.search-svg, .mic-svg {
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+.search-text {
+    flex: 1;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 450;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.85;
+}
+
+.search-end-icons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.demo-google-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.google-action-btn {
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    background: var(--demo-panel-tint, rgba(255, 255, 255, 0.75));
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: var(--demo-text, #202124);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s, background 0.2s;
+}
+
+.demo-dark .google-action-btn {
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #e8eaed;
+}
+
+.google-action-btn:hover {
+    transform: translateY(-2px);
+}
+
+.demo-google-shortcuts {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    margin-top: 6px;
+}
+
+.demo-shortcut-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.demo-shortcut-item span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--demo-text, #202124);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.demo-dark .demo-shortcut-item span {
+    color: #f1f3f4;
+}
+
+.shortcut-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 16px;
+    background: var(--demo-panel-tint, rgba(255, 255, 255, 0.75));
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    color: var(--demo-text, #202124);
+}
+
+.demo-dark .shortcut-circle {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #f1f3f4;
+}
+
+.gmail-circle { color: #EA4335 !important; }
+.yt-circle { color: #FF0000 !important; }
+.maps-circle { color: #34A853 !important; }
+.drive-circle { color: #FBBC05 !important; }
+
+/* Auto Theme Colors in Demo Panel */
+.demo-auto-colors {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #f7faff;
+}
+
+.demo-auto-colors[hidden] {
+    display: none;
+}
+
+.demo-auto-color-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 550;
+}
+
+.demo-auto-color-item input[type=color] {
+    width: 36px;
+    height: 28px;
+    padding: 2px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+}
+
+.demo-auto-color-item output {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--muted);
+}
+
 .demo-panel { display: flex; flex-direction: column; gap: 12px; padding: 26px; border: 1px solid var(--line); border-radius: 22px; background: white; }
 .demo-panel h3 { margin: 0 0 10px; }
 .demo-panel > label { display: flex; justify-content: space-between; gap: 10px; font-weight: 650; }

@@ -5,20 +5,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const dim = document.getElementById('demoDimRange');
     const stage = document.getElementById('demoStage');
     const themeNote = document.getElementById('demoThemeNote');
-    const customColor = document.getElementById('demoCustomColor');
-    const customColorRow = document.getElementById('demoCustomColorRow');
-    const customColorValue = document.getElementById('demoCustomColorValue');
+    const demoAutoDark = document.getElementById('demoAutoDark');
+    const demoAutoDarkValue = document.getElementById('demoAutoDarkValue');
+    const demoAutoLight = document.getElementById('demoAutoLight');
+    const demoAutoLightValue = document.getElementById('demoAutoLightValue');
+    const demoAutoColorRow = document.getElementById('demoAutoColorRow');
     const deviceTheme = window.matchMedia('(prefers-color-scheme: dark)');
 
+    // Ensure defaults start at 5px blur and 75% dim
+    blur.value = 5;
+    dim.value = 75;
+
     function updatePreview() {
-        const chosen = document.querySelector('input[name="demoColor"]:checked').value;
-        const color = chosen === 'auto' ? (deviceTheme.matches ? 'black' : 'white')
-            : chosen === 'custom' ? customColor.value : chosen;
-        const rgb = color === 'black' ? [0, 0, 0] : color === 'white' ? [255, 255, 255]
-            : [1, 3, 5].map(index => Number.parseInt(color.slice(index, index + 2), 16));
+        const chosen = document.querySelector('input[name="demoColor"]:checked')?.value || 'auto';
+        if (demoAutoColorRow) demoAutoColorRow.hidden = false;
+        if (demoAutoDarkValue && demoAutoDark) demoAutoDarkValue.textContent = demoAutoDark.value.toUpperCase();
+        if (demoAutoLightValue && demoAutoLight) demoAutoLightValue.textContent = demoAutoLight.value.toUpperCase();
+
+        let color = chosen;
+        if (chosen === 'auto') {
+            color = deviceTheme.matches ? (demoAutoDark?.value || '#000000') : (demoAutoLight?.value || '#ffffff');
+        } else if (chosen === 'dark' || chosen === 'black') {
+            color = demoAutoDark?.value || '#000000';
+        } else if (chosen === 'light' || chosen === 'white') {
+            color = demoAutoLight?.value || '#ffffff';
+        }
+
+        const rgb = color.startsWith('#')
+            ? [1, 3, 5].map(index => Number.parseInt(color.slice(index, index + 2), 16))
+            : [0, 0, 0];
+
         const darkPanel = (rgb[0] * .299 + rgb[1] * .587 + rgb[2] * .114) < 128;
-        customColorRow.hidden = chosen !== 'custom';
-        customColorValue.textContent = customColor.value.toUpperCase();
         stage.style.setProperty('--demo-blur', `${blur.value}px`);
         stage.style.setProperty('--demo-opacity', String(Number(dim.value) / 100));
         stage.style.setProperty('--demo-overlay', color);
@@ -26,17 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
         stage.classList.toggle('demo-dark', darkPanel);
         document.getElementById('demoBlurValue').textContent = `${blur.value} px`;
         document.getElementById('demoDimValue').textContent = `${dim.value}%`;
-        themeNote.textContent = chosen === 'custom'
-            ? `Custom overlay: ${customColor.value.toUpperCase()}. This preview does not change your saved settings.`
-            : chosen === 'auto'
-            ? `Auto: your device currently uses ${deviceTheme.matches ? 'dark → black' : 'light → white'} overlay.`
-            : `${color === 'black' ? 'Black' : 'White'} overlay selected for this preview.`;
+        themeNote.textContent = chosen === 'auto'
+            ? `Auto: currently uses ${deviceTheme.matches ? 'Dark Theme color (' + (demoAutoDark?.value || '#000000').toUpperCase() + ')' : 'Light Theme color (' + (demoAutoLight?.value || '#FFFFFF').toUpperCase() + ')'}.`
+            : `${chosen === 'dark' ? 'Dark Theme (' + (demoAutoDark?.value || '#000000').toUpperCase() + ')' : 'Light Theme (' + (demoAutoLight?.value || '#FFFFFF').toUpperCase() + ')'} selected for this preview.`;
     }
 
     blur.addEventListener('input', updatePreview);
     dim.addEventListener('input', updatePreview);
     document.querySelectorAll('input[name="demoColor"]').forEach(input => input.addEventListener('change', updatePreview));
-    customColor.addEventListener('input', updatePreview);
+    if (demoAutoDark) demoAutoDark.addEventListener('input', updatePreview);
+    if (demoAutoLight) demoAutoLight.addEventListener('input', updatePreview);
     deviceTheme.addEventListener('change', updatePreview);
     const demoWallpaper = document.getElementById('demoWallpaper');
     function triggerDemoAnimation() {
@@ -58,15 +74,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('demoReset').addEventListener('click', () => {
-        blur.value = 0;
-        dim.value = 50;
-        customColor.value = '#6955b8';
+        blur.value = 5;
+        dim.value = 75;
+        if (demoAutoDark) demoAutoDark.value = '#000000';
+        if (demoAutoLight) demoAutoLight.value = '#ffffff';
         document.querySelector('input[name="demoColor"][value="auto"]').checked = true;
         updatePreview();
         triggerDemoAnimation();
     });
     document.getElementById('demoButton').addEventListener('click', () => {
-        hint.textContent = 'The preview button stays readable. Use the extension popup to apply real settings.';
+        hint.textContent = 'The Google demo button stays readable. Use the extension popup to apply real settings.';
     });
     updatePreview();
     triggerDemoAnimation();

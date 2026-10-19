@@ -21,7 +21,6 @@
 
     <main id="top">
         <section class="hero">
-            <div class="success-pill"><span aria-hidden="true">&#10003;</span> Glass UI is on by default</div>
             <h1>Your favorite wallpaper,<br><span>on every website.</span></h1>
             <p class="hero-copy">Transform the web with your own image, GIF, or video. Follow these three simple steps to get started.</p>
             <div class="hero-actions">
@@ -38,33 +37,67 @@
                 <p>This preview is for learning. Changes here do not modify your browser settings.</p>
             </div>
             <div class="demo-layout">
-                <div class="demo-stage" id="demoStage" aria-label="Glass UI preview">
+                <div class="demo-stage" id="demoStage" aria-label="Google Search Glass UI preview">
                     <div class="demo-wallpaper" id="demoWallpaper" aria-hidden="true"><span class="demo-sun"></span><span class="demo-hill hill-one"></span><span class="demo-hill hill-two"></span></div>
                     <div class="demo-dim" id="demoDim" aria-hidden="true"></div>
-                    <div class="demo-glass">
-                        <span class="demo-kicker">GLASS UI PREVIEW</span>
-                        <h3>Wallpaper stays visible.</h3>
-                        <p>Page panels become translucent while important controls stay clear.</p>
-                        <button type="button" class="demo-button" id="demoButton">A sample button</button>
+                    <div class="demo-google-wrapper" id="demoGoogleWrapper">
+                        <div class="demo-google-logo" aria-label="Google">
+                            <span class="g-blue">G</span><span class="g-red">o</span><span class="g-yellow">o</span><span class="g-blue">g</span><span class="g-green">l</span><span class="g-red">e</span>
+                        </div>
+                        <div class="demo-google-search-bar">
+                            <svg class="search-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <span class="search-text">Search Google or type a URL</span>
+                            <div class="search-end-icons">
+                                <svg class="mic-svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"></path><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"></path></svg>
+                            </div>
+                        </div>
+                        <div class="demo-google-actions">
+                            <button type="button" class="google-action-btn" id="demoButton">Google Search</button>
+                            <button type="button" class="google-action-btn">I'm Feeling Lucky</button>
+                        </div>
+                        <div class="demo-google-shortcuts">
+                            <div class="demo-shortcut-item">
+                                <div class="shortcut-circle gmail-circle">M</div>
+                                <span>Gmail</span>
+                            </div>
+                            <div class="demo-shortcut-item">
+                                <div class="shortcut-circle yt-circle">&#9654;</div>
+                                <span>YouTube</span>
+                            </div>
+                            <div class="demo-shortcut-item">
+                                <div class="shortcut-circle maps-circle">&#9906;</div>
+                                <span>Maps</span>
+                            </div>
+                            <div class="demo-shortcut-item">
+                                <div class="shortcut-circle drive-circle">&#9651;</div>
+                                <span>Drive</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="demo-panel">
                     <h3>Adjust the preview</h3>
-                    <label for="demoBlur">Wallpaper blur <output id="demoBlurValue">0 px</output></label>
-                    <input type="range" id="demoBlur" min="0" max="30" value="0">
-                    <label for="demoDimRange">Wallpaper dim <output id="demoDimValue">50%</output></label>
-                    <input type="range" id="demoDimRange" min="0" max="100" step="5" value="50">
+                    <label for="demoBlur">Wallpaper blur <output id="demoBlurValue">5 px</output></label>
+                    <input type="range" id="demoBlur" min="0" max="30" value="5">
+                    <label for="demoDimRange">Wallpaper dim <output id="demoDimValue">75%</output></label>
+                    <input type="range" id="demoDimRange" min="0" max="100" step="5" value="75">
                     <p class="demo-note">Large panels and navigation use 5 px glass blur. Small text surfaces stay sharp.</p>
                     <fieldset class="demo-colors"><legend>Overlay color</legend>
                         <label><input type="radio" name="demoColor" value="auto" checked> Auto</label>
-                        <label><input type="radio" name="demoColor" value="black"> Black</label>
-                        <label><input type="radio" name="demoColor" value="white"> White</label>
-                        <label><input type="radio" name="demoColor" value="custom"> Custom</label>
+                        <label><input type="radio" name="demoColor" value="dark"> Dark</label>
+                        <label><input type="radio" name="demoColor" value="light"> Light</label>
                     </fieldset>
-                    <div class="demo-custom-color" id="demoCustomColorRow" hidden>
-                        <label for="demoCustomColor">Choose a color</label>
-                        <input type="color" id="demoCustomColor" value="#6955b8">
-                        <output id="demoCustomColorValue" for="demoCustomColor">#6955B8</output>
+                    <div class="demo-auto-colors" id="demoAutoColorRow">
+                        <div class="demo-auto-color-item">
+                            <label for="demoAutoDark">Dark Theme</label>
+                            <input type="color" id="demoAutoDark" value="#000000">
+                            <output id="demoAutoDarkValue">#000000</output>
+                        </div>
+                        <div class="demo-auto-color-item">
+                            <label for="demoAutoLight">Light Theme</label>
+                            <input type="color" id="demoAutoLight" value="#ffffff">
+                            <output id="demoAutoLightValue">#FFFFFF</output>
+                        </div>
                     </div>
                     <p class="demo-note" id="demoThemeNote" role="status">Auto follows your device theme.</p>
                     <button class="demo-reset" type="button" id="demoReset">Reset preview</button>
@@ -102,7 +135,7 @@
                     <span class="step-label">STEP 03</span>
                     <div class="step-icon" aria-hidden="true">&#10003;</div>
                     <h3>Apply &amp; save</h3>
-                    <p>Click <strong>Apply &amp; Save</strong>. The extension starts with 0 px blur and 50% dim. Refresh a website tab if the effect is not immediately visible.</p>
+                    <p>Click <strong>Apply &amp; Save</strong>. The extension starts with 5 px blur and 75% dim. Refresh a website tab if the effect is not immediately visible.</p>
                     <div class="fake-save">Apply &amp; Save</div>
                 </li>
             </ol>

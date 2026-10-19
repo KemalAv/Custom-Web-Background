@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="popup.css">
 </head>
 
-<body class="animations-enabled">
+<body class="animations-enabled mode-basic">
     <div class="container popup-animate-in">
         <header>
             <div class="header-title-row">
@@ -25,12 +25,14 @@
 
         <main id="settings-panel">
 
-            <section class="form-group">
-                <div class="toggle-switch">
-                    <label for="extraTransparentCheckbox" style="font-weight: normal;">Extra Transparant</label>
-                    <input type="checkbox" id="extraTransparentCheckbox">
-                </div>
-                <p class="mode-hint">Enables extreme background transparency for cards and containers (previous Glass UI mode).</p>
+            <section class="form-group advanced-only">
+                <label for="transparencyLevelSelect">Transparant Level</label>
+                <select id="transparencyLevelSelect"
+                    style="width: 100%; margin-top: 6px; padding: 6px; box-sizing: border-box; border: 1px solid var(--border-color); border-radius: 4px; background-color: #fff; color: var(--text-primary); font-size: 13px;">
+                    <option value="1" selected>Level 1 - Non Transparant</option>
+                    <option value="2">Level 2 - Glass UI</option>
+                    <option value="3">Level 3 - Transparant</option>
+                </select>
             </section>
 
             <section class="form-group">
@@ -40,12 +42,15 @@
                     <label><input type="radio" name="siteMode" value="specific"> Specific Websites</label>
                 </div>
                 <div id="specificSitesSection" hidden style="margin-top: 6px;">
-                    <button type="button" id="addCurrentSiteButton" class="button-secondary" style="width: 100%; margin-bottom: 6px;">
+                    <button type="button" id="addCurrentSiteButton" class="button-secondary"
+                        style="width: 100%; margin-bottom: 6px;">
                         + Add Current Website
                     </button>
                     <div style="display: flex; gap: 6px; margin-bottom: 6px;">
-                        <input type="text" id="newSiteInput" placeholder="e.g. google.com" style="flex: 1; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px;">
-                        <button type="button" id="addSiteButton" class="button-secondary" style="padding: 6px 12px;">Add</button>
+                        <input type="text" id="newSiteInput" placeholder="e.g. google.com"
+                            style="flex: 1; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+                        <button type="button" id="addSiteButton" class="button-secondary"
+                            style="padding: 6px 12px;">Add</button>
                     </div>
                     <div class="sites-header-row">
                         <span class="sites-count-label">Websites (<span id="sitesCount">0</span>)</span>
@@ -55,67 +60,162 @@
                 </div>
             </section>
 
-            <section class="form-group">
+            <section class="form-group advanced-only">
                 <div class="toggle-switch">
                     <label for="animationsCheckbox" style="font-weight: normal;">Enable UI Animations</label>
-                    <input type="checkbox" id="animationsCheckbox" checked>
+                    <input type="checkbox" id="animationsCheckbox">
                 </div>
             </section>
 
-            <section class="form-group">
+            <section class="form-group advanced-only">
                 <div class="toggle-switch">
                     <label for="autoTextColorCheckbox" style="font-weight: normal;">Correct Text Color</label>
-                    <input type="checkbox" id="autoTextColorCheckbox" checked>
+                    <input type="checkbox" id="autoTextColorCheckbox">
                 </div>
             </section>
 
             <section class="form-group">
                 <label>Background Media (JPG, PNG, GIF, MP4)</label>
-                <div class="video-note" style="font-size: 11px; margin-bottom: 6px; color: #666;">
-                    Supports images and MP4 video backgrounds.
+                <div class="media-unified-box">
+                    <div class="video-note">
+                        Supports images and MP4 video backgrounds.
+                    </div>
+                    <input type="file" id="imageUpload" accept="image/jpeg,image/png,image/gif,video/mp4" hidden>
+                    <button type="button" id="uploadButton" class="button-secondary media-upload-btn">
+                        <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" x2="12" y1="3" y2="15" />
+                        </svg>
+                        <span>Choose File...</span>
+                    </button>
+                    <span id="currentImageName">Built-in background</span>
+                    <div class="media-divider">
+                        <span>Or Enter Media URL</span>
+                    </div>
+                    <div class="media-url-row">
+                        <input type="url" id="imageUrlInput" placeholder="https://example.com/image.jpg">
+                        <button type="button" id="applyUrlButton" class="button-secondary media-apply-btn">Apply URL</button>
+                    </div>
                 </div>
-                <input type="file" id="imageUpload" accept="image/jpeg,image/png,image/gif,video/mp4" hidden>
-                <button id="uploadButton" class="button-secondary">Choose File...</button>
-                <span id="currentImageName">Built-in background</span>
             </section>
 
-            <section class="form-group">
-                <label>Or Enter Media URL</label>
-                <input type="url" id="imageUrlInput" placeholder="https://example.com/image.jpg"
-                    style="width: 100%; margin-top: 6px; padding: 6px;">
-                <button id="applyUrlButton" class="button-secondary" style="margin-top: 6px;">Apply URL</button>
-            </section>
-
-            <section class="form-group">
+            <section class="form-group advanced-only">
                 <label for="blurSlider">Background Blur: <span id="blurValue">0px</span></label>
                 <input type="range" id="blurSlider" min="0" max="30" step="1" value="0">
             </section>
 
-            <section class="form-group">
-                <label for="dimLevel">Background Dim: <span id="dimValue">50%</span></label>
-                <input type="range" id="dimLevel" min="0" max="1" step="0.05" value="0.5">
+            <section class="form-group advanced-only">
+                <label for="dimLevel">Background Dim: <span id="dimValue">75%</span></label>
+                <input type="range" id="dimLevel" min="0" max="1" step="0.05" value="0.75">
             </section>
 
             <section class="form-group">
                 <label>Dim Overlay Color:</label>
                 <div class="radio-group" id="dimColorGroup">
                     <label><input type="radio" name="dimColor" value="auto" checked> Auto</label>
-                    <label><input type="radio" name="dimColor" value="black"> Black</label>
-                    <label><input type="radio" name="dimColor" value="white"> White</label>
-                    <label><input type="radio" name="dimColor" value="custom"> Custom</label>
+                    <label><input type="radio" name="dimColor" value="dark"> Dark</label>
+                    <label><input type="radio" name="dimColor" value="light"> Light</label>
                 </div>
-                <p class="mode-hint">Auto follows your device theme: black for dark mode, white for light mode.</p>
-                <div class="custom-color-row" id="customDimColorSection" hidden>
-                    <label for="customDimColor">Pick color</label>
-                    <input type="color" id="customDimColor" value="#000000">
-                    <output id="customDimColorValue" for="customDimColor">#000000</output>
+                <p class="mode-hint advanced-only" id="dimColorHint">Theme Overlay Colors:</p>
+                <div class="auto-dim-section advanced-only" id="autoDimColorSection">
+                    <div class="auto-dim-row">
+                        <label for="autoDarkColor">Dark Theme Color</label>
+                        <div class="auto-dim-control">
+                            <input type="color" id="autoDarkColor" value="#000000">
+                            <output id="autoDarkColorValue" for="autoDarkColor">#000000</output>
+                        </div>
+                    </div>
+                    <div class="auto-dim-row">
+                        <label for="autoLightColor">Light Theme Color</label>
+                        <div class="auto-dim-control">
+                            <input type="color" id="autoLightColor" value="#ffffff">
+                            <output id="autoLightColorValue" for="autoLightColor">#FFFFFF</output>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3 Presets for Blur & Dim -->
+            <section class="form-group" id="presetSection">
+                <label>Quick Presets (Blur &amp; Dim):</label>
+                <div class="preset-group">
+                    <button type="button" class="preset-btn active" id="presetClearBtn" data-blur="0" data-dim="0.75">
+                        <span class="preset-title">
+                            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                                <circle cx="9" cy="9" r="2" />
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                            </svg>
+                            <span>Default (Vivid &amp; Clear)</span>
+                        </span>
+                        <span class="preset-desc">Blur: 0px &bull; Dim: 75%</span>
+                    </button>
+                    <button type="button" class="preset-btn" id="presetDefaultBtn" data-blur="5" data-dim="0.75">
+                        <span class="preset-title">
+                            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <span>Eye-Care</span>
+                        </span>
+                        <span class="preset-desc">Blur: 5px &bull; Dim: 75%</span>
+                    </button>
+                    <button type="button" class="preset-btn" id="presetFocusBtn" data-blur="25" data-dim="0.50">
+                        <span class="preset-title">
+                            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                            </svg>
+                            <span>Deep Focus</span>
+                        </span>
+                        <span class="preset-desc">Blur: 25px &bull; Dim: 50%</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 2 Buttons: Mode Switch (Basic/Advanced) & Reset Defaults -->
+            <section class="form-group actions-row-group">
+                <div class="action-buttons-row">
+                    <button type="button" id="modeToggleButton" class="button-mode-toggle"
+                        title="Switch between Basic and Advanced mode">
+                        <span id="modeToggleIcon" class="icon-wrap" aria-hidden="true">
+                            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="4" x2="4" y1="21" y2="14" />
+                                <line x1="4" x2="4" y1="10" y2="3" />
+                                <line x1="12" x2="12" y1="21" y2="12" />
+                                <line x1="12" x2="12" y1="8" y2="3" />
+                                <line x1="20" x2="20" y1="21" y2="16" />
+                                <line x1="20" x2="20" y1="12" y2="3" />
+                                <line x1="2" x2="6" y1="14" y2="14" />
+                                <line x1="10" x2="14" y1="8" y2="8" />
+                                <line x1="18" x2="22" y1="16" y2="16" />
+                            </svg>
+                        </span>
+                        <span id="modeToggleText">Switch to Advanced Mode</span>
+                    </button>
+                    <button type="button" id="resetButton" class="button-reset" title="Reset all settings to default">
+                        <span class="icon-wrap" aria-hidden="true">
+                            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                <path d="M3 3v5h5" />
+                            </svg>
+                        </span>
+                        <span>Reset Defaults</span>
+                    </button>
                 </div>
             </section>
 
         </main>
 
         <footer>
-            <button id="saveButton" class="button-primary">Apply & Save</button>
+            <button id="saveButton" class="button-primary">Apply &amp; Save</button>
             <div id="status"></div>
             <p class="donate-link">
                 Gimmie your money please:

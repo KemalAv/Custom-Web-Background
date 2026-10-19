@@ -18,12 +18,17 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
     if (reason === 'install') {
         chrome.storage.local.set({
             isEnabled: true,
+            uiMode: 'basic',
             extraTransparent: false,
+            transparencyLevel: 1,
             siteMode: 'all',
             specificSites: [],
             blurIntensity: 0,
-            dimLevel: 0.5,
+            dimLevel: 0.75,
             dimColor: 'auto',
+            autoDarkColor: '#000000',
+            autoLightColor: '#ffffff',
+            customDimColor: '#000000',
             imageUrl: 'icons/background.png',
             imageName: 'Built-in background',
             mediaType: 'image'
