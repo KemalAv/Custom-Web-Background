@@ -21,5 +21,5 @@ Make your browser look clean, modern, and personal. This extension seamlessly ap
 6. **Fluid UI Animations & Glass UI:**
    - Enjoy subtle glassmorphism and smooth, configurable interface animations.
 
-  ### Add Wallpapers to Any Website! Thanks for Claude and Gemini for helping this project!
+  ### Thanks for Claude for helping this project!
 
