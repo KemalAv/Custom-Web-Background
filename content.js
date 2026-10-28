@@ -267,8 +267,9 @@
         el.style.width = '100%';
         el.style.height = '100%';
         el.style.objectFit = 'cover';
-        el.style.transform = 'translateZ(0)';
+        el.style.transform = blur > 0 ? 'scale(1.06) translateZ(0)' : 'translateZ(0)';
         el.style.filter = blur > 0 ? `blur(${blur}px)` : 'none';
+        el.style.webkitFilter = blur > 0 ? `blur(${blur}px)` : 'none';
     }
 
     function initContainer() {
@@ -318,12 +319,17 @@
             bgVideo.setAttribute('allowtransparency', 'true');
 
             bgOverlay = document.createElement('div');
+            bgOverlay.id = 'universal-bg-overlay';
             Object.assign(bgOverlay.style, {
                 position: 'absolute', inset: 0,
-                display: 'none', opacity: 0,
+                width: '100%', height: '100%',
+                display: 'block', opacity: 1,
                 transition: 'none',
                 pointerEvents: 'none',
+                zIndex: 2,
             });
+            bgImage.style.zIndex = 1;
+            bgVideo.style.zIndex = 1;
 
             bgContainer.append(bgImage, bgVideo, bgOverlay);
         }
@@ -521,7 +527,6 @@
         });
         let el;
         let count = 0;
-        // Di Level 3 perbanyak batas elemen yang dipindai agar seluruh halaman tertransparankan
         const maxElements = isLvl3 ? (incremental ? 1500 : 3500) : (incremental ? 500 : 1000);
         while ((el = walker.nextNode()) && count < maxElements) {
             if (incremental && evaluatedElements.has(el)) {
@@ -550,7 +555,6 @@
                 continue;
             }
             if (isForegroundLayer(el, css, rect)) {
-                // Di Level 3, elemen fixed/sticky layout biasa (sidebar, sticky header) ikut ditransparankan jika bukan modal dialog/dropdown
                 const isRealModal = isProtectedSurface(el) || /(?:^|[\s_-])(composer|modal|dialog|popover|dropdown|tooltip|toast|portal|drawer)(?:[\s_-]|$)/.test(
                     `${el.id} ${typeof el.className === 'string' ? el.className : ''}`.toLowerCase()
                 );
@@ -573,8 +577,6 @@
                 if (el.getAttribute(SURFACE_ATTR) !== 'clear') el.setAttribute(SURFACE_ATTR, 'clear');
                 if (el.hasAttribute(SAFE_ATTR)) el.removeAttribute(SAFE_ATTR);
             } else if (isGlassPanel(el, rect)) {
-                // Di Level 3, panel konten/kartu dijadikan clear transparan agar jauh lebih banyak elemen yang transparan
-                // Hanya panel navigasi (header/nav/navbar) yang tetap frosted/glass
                 if (isLvl3 && !isNavigationSurface(el)) {
                     if (el.getAttribute(SURFACE_ATTR) !== 'clear') el.setAttribute(SURFACE_ATTR, 'clear');
                     if (el.hasAttribute(SAFE_ATTR)) el.removeAttribute(SAFE_ATTR);
@@ -585,8 +587,6 @@
                 }
             } else {
                 const bigEnough = rect.width >= 320 && rect.height >= 140;
-                // Level 2 (Glass UI): elemen besar >= 320x140 dibuat clear transparan
-                // Level 3 (Transparant): semua container/kartu/elemen yang lolos dibuat clear transparan
                 if ((isLvl2 && bigEnough) || isLvl3) {
                     if (el.getAttribute(SURFACE_ATTR) !== 'clear') el.setAttribute(SURFACE_ATTR, 'clear');
                     if (el.hasAttribute(SAFE_ATTR)) el.removeAttribute(SAFE_ATTR);
@@ -620,7 +620,7 @@
                 const bg = style.backgroundColor;
                 if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
                     const rgba = bg.match(/[\d.]+/g)?.map(Number);
-                    if (rgba && (rgba.length < 4 || rgba[3] > 0.35)) {
+                    if (rgba && (rgba.length < 4 || rgba[3] > 0.5)) {
                         return rgba;
                     }
                 }
@@ -654,7 +654,7 @@
                 if (!rgb || rgb.length !== 3 || !isNeutralColor(rgb)) continue;
 
                 const bg = getEffectiveBackgroundColor(el);
-                const hasPanel = bg && (bg.length < 4 || bg[3] > 0.35);
+                const hasPanel = bg && (bg.length < 4 || bg[3] > 0.5);
 
                 const panelLuminance = hasPanel
                     ? (0.299 * bg[0] + 0.587 * bg[1] + 0.114 * bg[2]) / 255 : null;
@@ -669,11 +669,9 @@
         const glassTag = document.getElementById(GLASS_STYLE_ID);
         if (!glassTag) return;
 
-
-
         const [r, g, b] = getDimColorRgb();
         const isVideoMedia = currentSettings.mediaType === 'video';
-        const blurVal = Number(currentSettings.blurIntensity ?? 5);
+        const blurVal = Number(currentSettings.blurIntensity ?? 0);
         const dimVal = Number(currentSettings.dimLevel ?? 0.75);
 
         const useFrostedBackdrop = !isVideoMedia && blurVal < 4 && dimVal < 0.70;
@@ -684,7 +682,7 @@
         let surfaceRules = '';
 
         if (currentSettings.transparencyLevel === 3) {
-            // Level 3 (Transparant - lebih banyak elemen transparan dengan gaya versi dulu)
+            // Level 3 (Transparant)
             const tint = `rgba(${r},${g},${b},0.75)`;
             surfaceRules = `
             html, body {
@@ -707,7 +705,7 @@
             }
             `;
         } else if (currentSettings.transparencyLevel === 1) {
-            // Level 1: Non Transparant (panel glass/frosted tetap normal bawaan website)
+            // Level 1: Non Transparant
             surfaceRules = `
             html, body {
                 background-color: transparent !important;
@@ -724,8 +722,8 @@
             }
             `;
         } else {
-            // Level 2 (Glass UI - pindahan dari Level 3 versi dulu)
-            const tint = `rgba(${r},${g},${b},0.75)`;
+            // Level 2 (Glass UI - semi transparan 0.5 + blur 10px)
+            const tint = `rgba(${r},${g},${b},0.5)`;
             surfaceRules = `
             html, body {
                 background-color: transparent !important;
@@ -738,12 +736,8 @@
             [${SURFACE_ATTR}="glass"], [${SURFACE_ATTR}="frosted"] {
                 background-color: ${tint} !important;
                 background-image: none !important;
-            }
-            ${backdropRule ? `[${SURFACE_ATTR}="frosted"] {\n                ${backdropRule}\n            }` : ''}
-            [${SAFE_ATTR}],
-            [${SAFE_ATTR}] * {
-                -webkit-backdrop-filter: none !important;
-                backdrop-filter: none !important;
+                -webkit-backdrop-filter: blur(10px) !important;
+                backdrop-filter: blur(10px) !important;
             }
             `;
         }
@@ -841,13 +835,21 @@
         bgContainer.style.transition = 'none';
         bgImage.style.transition = 'none';
         bgVideo.style.transition = 'none';
-        if (bgOverlay) bgOverlay.style.display = 'none';
-
-        bgContainer.style.backgroundColor = getDimColorCss();
-        bgContainer.style.opacity = '1';
+        // bgOverlay enabled
 
         const dimAlpha = Math.max(0, Math.min(1, parseFloat(currentSettings.dimLevel ?? 0.75)));
-        const mediaOpacity = String(Math.max(0, Math.min(1, 1 - dimAlpha)));
+        const blurAmount = Math.max(0, Number(currentSettings.blurIntensity || 0));
+        const [dimR, dimG, dimB] = getDimColorRgb();
+
+        bgContainer.style.backgroundColor = `rgb(${dimR},${dimG},${dimB})`;
+        bgContainer.style.opacity = '1';
+
+        if (bgOverlay) {
+            bgOverlay.style.display = 'block';
+            bgOverlay.style.opacity = '1';
+            bgOverlay.style.backgroundColor = `rgba(${dimR},${dimG},${dimB},${dimAlpha})`;
+        }
+        const mediaOpacity = '1';
 
         if (imgSrc) {
             const isHeavy = imgLen > 10000000;
@@ -1019,11 +1021,7 @@
                     bgImage.style.opacity = targetOpacity;
                 }
 
-                if (preBakedSrc) {
-                    applyImageBlur(bgImage, 0);
-                } else {
-                    applyImageBlur(bgImage, currentSettings.blurIntensity || 0);
-                }
+                applyImageBlur(bgImage, currentSettings.blurIntensity || 0);
             }
         }
     }
@@ -1051,12 +1049,20 @@
         const imgSrc = rawSrc === 'icons/background.png'
             ? chrome.runtime.getURL('icons/background.png') : rawSrc;
 
-        if (bgOverlay) bgOverlay.style.display = 'none';
-        bgContainer.style.backgroundColor = getDimColorCss();
+        // bgOverlay enabled
+        const dimAlpha = Math.max(0, Math.min(1, parseFloat(currentSettings.dimLevel ?? 0.75)));
+        const blurAmount = Math.max(0, Number(currentSettings.blurIntensity || 0));
+        const [dimR, dimG, dimB] = getDimColorRgb();
+
+        bgContainer.style.backgroundColor = `rgb(${dimR},${dimG},${dimB})`;
         bgContainer.style.opacity = '1';
 
-        const dimAlpha = Math.max(0, Math.min(1, parseFloat(currentSettings.dimLevel ?? 0.75)));
-        const mediaOpacity = String(Math.max(0, Math.min(1, 1 - dimAlpha)));
+        if (bgOverlay) {
+            bgOverlay.style.display = 'block';
+            bgOverlay.style.opacity = '1';
+            bgOverlay.style.backgroundColor = `rgba(${dimR},${dimG},${dimB},${dimAlpha})`;
+        }
+        const mediaOpacity = '1';
 
         if (isVideoMedia) {
             bgImage.style.opacity = '0';
@@ -1093,13 +1099,8 @@
                 lastLoadedSrc = activeSrc;
             }
 
-            if (preBakedSrc) {
-                bgImage.style.opacity = '1';
-                applyImageBlur(bgImage, 0);
-            } else {
-                bgImage.style.opacity = mediaOpacity;
-                applyImageBlur(bgImage, currentSettings.blurIntensity || 0);
-            }
+            bgImage.style.opacity = '1';
+            applyImageBlur(bgImage, currentSettings.blurIntensity || 0);
         }
     }
 
@@ -1264,17 +1265,29 @@
         if (chrome?.storage?.onChanged) {
             chrome.storage.onChanged.addListener((changes, area) => {
                 if (area && area !== 'local') return;
-                fetchSettings(() => apply(true));
+                lastLoadedSrc = '';
+                lastRequestedSrc = '';
+                fetchSettings(() => {
+                    apply(true);
+                    updateBackgroundOnly();
+                });
             });
         }
 
         if (chrome?.runtime?.onMessage) {
             chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 if (message?.type === 'FORCE_APPLY_SETTINGS') {
+                    lastLoadedSrc = '';
+                    lastRequestedSrc = '';
                     if (message.settings) {
                         currentSettings = normalizeSettings(Object.assign({}, currentSettings, message.settings));
+                        apply(true);
+                        updateBackgroundOnly();
                     }
-                    fetchSettings(() => apply(true));
+                    fetchSettings(() => {
+                        apply(true);
+                        updateBackgroundOnly();
+                    });
                     sendResponse?.({ status: 'ok' });
                 }
             });

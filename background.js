@@ -18,11 +18,12 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
     if (reason === 'install') {
         chrome.storage.local.set({
             isEnabled: true,
-            uiMode: 'basic',
             extraTransparent: false,
             transparencyLevel: 1,
             siteMode: 'all',
             specificSites: [],
+            animationsEnabled: false,
+            autoTextColor: false,
             blurIntensity: 0,
             dimLevel: 0.75,
             dimColor: 'auto',

@@ -1,170 +1,581 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome — Custom Web Background</title>
-    <link rel="stylesheet" href="welcome.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Web Background - Add Wallpaper to Any Websites</title>
+  <link rel="stylesheet" href="welcome.css">
 </head>
-
 <body>
-    <div class="ambient ambient-one" aria-hidden="true"></div>
-    <div class="ambient ambient-two" aria-hidden="true"></div>
+  <!-- Full Page Live Background Wallpaper & Tint (Adapts to Auto Theme) -->
+  <div class="welcome-full-bg" id="welcomeFullBg"></div>
+  <div class="welcome-full-tint" id="welcomeFullTint"></div>
 
-    <header class="site-header">
-        <a class="brand" href="#top" aria-label="Custom Web Background">
-            <img src="icons/icon128.png" alt="">
-            <span>Custom Web Background</span>
-        </a>
+  <div class="welcome-page-container">
+
+    <!-- Top Hero Banner: Welcome Greeting -->
+    <header class="hero-header">
+      <div class="hero-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span>Installation & Setup Guide</span>
+      </div>
+      <h1 class="hero-title">Custom Web Background - Add Wallpaper to Any Websites</h1>
+      <p class="hero-subtitle">Personalize every website you visit with stunning, custom image or MP4 video background wallpapers while keeping text clear and comfortable to read.</p>
+      
+      <div class="hero-actions">
+        <button type="button" id="btnOpenPuzzleExt" class="btn-puzzle-action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c0-1.571-1.274-2.85-2.846-2.85h-1.593v-.004a2.996 2.996 0 1 0-5.992 0V5H7.415C5.843 5 4.569 6.279 4.569 7.85v2.585h.004a2.996 2.996 0 1 0 0 5.992v.004H4.57v2.585c0 1.571 1.274 2.85 2.846 2.85h2.585v-.004a2.996 2.996 0 1 0 5.992 0v.004h2.585c1.572 0 2.846-1.279 2.846-2.85v-1.593h.004a2.996 2.996 0 1 0 0-5.992h-.004V7.85z"/></svg>
+          <span>Pin / Open Extension in Toolbar</span>
+        </button>
+        <a href="#interactive-playground" class="btn-scroll-action">Try in Live YouTube Preview ↓</a>
+        <div class="hero-donate-wrap">
+          <span class="donate-tagline-hero">Gimmie your money please:</span>
+          <a href="https://sociabuzz.com/kemalavicennafaza" target="_blank" class="btn-donate-hero">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+            <span>Support Creator</span>
+          </a>
+        </div>
+      </div>
     </header>
 
-    <main id="top">
-        <section class="hero">
-            <h1>Your favorite wallpaper,<br><span>on every website.</span></h1>
-            <p class="hero-copy">Transform the web with your own image, GIF, or video. Follow these three simple steps to get started.</p>
-            <div class="hero-actions">
-                <a class="primary-action" href="#try-it">Try the live preview <span aria-hidden="true">&darr;</span></a>
-                <button id="openExtensionButton" class="secondary-action" type="button">Open extension</button>
-            </div>
-            <p id="openExtensionHint" class="action-hint" role="status" aria-live="polite"></p>
-        </section>
+    <!-- Pin Extension Guide Modal / Tooltip -->
+    <div id="pinGuideModal" class="pin-guide-modal" style="display: none;">
+      <div class="pin-guide-content">
+        <div class="pin-guide-header">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c0-1.571-1.274-2.85-2.846-2.85h-1.593v-.004a2.996 2.996 0 1 0-5.992 0V5H7.415C5.843 5 4.569 6.279 4.569 7.85v2.585h.004a2.996 2.996 0 1 0 0 5.992v.004H4.57v2.585c0 1.571 1.274 2.85 2.846 2.85h2.585v-.004a2.996 2.996 0 1 0 5.992 0v.004h2.585c1.572 0 2.846-1.279 2.846-2.85v-1.593h.004a2.996 2.996 0 1 0 0-5.992h-.004V7.85z"/></svg>
+            How to Pin Extension for Instant Access
+          </h3>
+          <button type="button" id="btnClosePinGuide" class="close-guide-btn" title="Close">✕</button>
+        </div>
+        <div class="pin-steps-visual">
+          <div class="pin-step-item">
+            <span class="pin-badge">Step 1</span>
+            <p>Click the <b>Puzzle icon (🧩)</b> at the top-right corner of your Chrome browser toolbar.</p>
+          </div>
+          <div class="pin-step-item">
+            <span class="pin-badge">Step 2</span>
+            <p>Find <b>Custom Web Background</b> in the list of installed extensions.</p>
+          </div>
+          <div class="pin-step-item">
+            <span class="pin-badge">Step 3</span>
+            <p>Click the <b>Pin icon (📌)</b> next to it so it stays visible on your toolbar for fast access!</p>
+          </div>
+        </div>
+        <button type="button" id="btnDismissGuide" class="btn-dismiss-guide">Got it, thanks!</button>
+      </div>
+    </div>
 
-        <section id="try-it" class="demo-section" aria-labelledby="demoTitle">
-            <div class="section-heading">
-                <p class="eyebrow">TRY IT HERE</p>
-                <h2 id="demoTitle">Explore the effect</h2>
-                <p>This preview is for learning. Changes here do not modify your browser settings.</p>
+    <!-- Quick Start Guide (How To Use) -->
+    <section class="guide-section">
+      <div class="guide-header">
+        <h2 class="section-heading">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          How to Use — Quick Start Guide
+        </h2>
+        <p class="section-subheading">Follow these 5 simple steps to transform your browsing experience into a clean and personalized aesthetic.</p>
+      </div>
+
+      <div class="guide-steps-grid">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div class="step-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <h3>Choose Background Media</h3>
+          <p>Upload your favorite image (JPG, PNG, GIF) or looping video (MP4) from your computer. You can also paste any web image URL or use our built-in wallpaper.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div class="step-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <h3>Choose Transparency Mode</h3>
+          <p>Select how website containers blend: <b>None Transparent</b> (standard solid text boxes), <b>Glass UI</b> (frosted blurred glass), or <b>Transparent</b> (full transparency).</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div class="step-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          </div>
+          <h3>Adjust Blur & Dimming</h3>
+          <p>Use the <b>Blur</b> slider to soften wallpaper details and the <b>Dim</b> slider to balance brightness, or pick instant presets (<i>Eye-Care</i> / <i>Deep Focus</i>) for optimal readability.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <div class="step-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          </div>
+          <h3>Target Websites & Themes</h3>
+          <p>Choose whether wallpapers appear globally across all websites or only on up to 10 specific websites (with convenient 1-click active tab addition).</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">5</div>
+          <div class="step-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+          </div>
+          <h3>Apply & Save</h3>
+          <p>Click <b>Apply & Save</b>. Open any website tab (such as YouTube or Google) and enjoy your new wallpaper in real-time!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Workspace (Controls with Explanations + Live YouTube Preview) -->
+    <section class="interactive-workspace" id="interactive-playground">
+      <div class="workspace-heading">
+        <h2>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Full Configuration Panel & Live YouTube UI Preview
+        </h2>
+        <p>This workspace mirrors the extension's popup settings with detailed feature explanations alongside a real-time simulated YouTube UI live preview. The Auto theme overlay dynamically adapts to your theme settings!</p>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Left Column: Control Panel with Detailed Explanations -->
+        <div class="control-panel">
+          <div class="panel-header">
+            <h3>Configuration Panel</h3>
+            <div class="header-right-donate">
+              <span class="donate-tagline">Gimmie your money please:</span>
+              <a href="https://sociabuzz.com/kemalavicennafaza" target="_blank" class="donate-badge" title="Support Creator">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                <span>Support</span>
+              </a>
             </div>
-            <div class="demo-layout">
-                <div class="demo-stage" id="demoStage" aria-label="Google Search Glass UI preview">
-                    <div class="demo-wallpaper" id="demoWallpaper" aria-hidden="true"><span class="demo-sun"></span><span class="demo-hill hill-one"></span><span class="demo-hill hill-two"></span></div>
-                    <div class="demo-dim" id="demoDim" aria-hidden="true"></div>
-                    <div class="demo-google-wrapper" id="demoGoogleWrapper">
-                        <div class="demo-google-logo" aria-label="Google">
-                            <span class="g-blue">G</span><span class="g-red">o</span><span class="g-yellow">o</span><span class="g-blue">g</span><span class="g-green">l</span><span class="g-red">e</span>
-                        </div>
-                        <div class="demo-google-search-bar">
-                            <svg class="search-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                            <span class="search-text">Search Google or type a URL</span>
-                            <div class="search-end-icons">
-                                <svg class="mic-svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"></path><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"></path></svg>
-                            </div>
-                        </div>
-                        <div class="demo-google-actions">
-                            <button type="button" class="google-action-btn" id="demoButton">Google Search</button>
-                            <button type="button" class="google-action-btn">I'm Feeling Lucky</button>
-                        </div>
-                        <div class="demo-google-shortcuts">
-                            <div class="demo-shortcut-item">
-                                <div class="shortcut-circle gmail-circle">M</div>
-                                <span>Gmail</span>
-                            </div>
-                            <div class="demo-shortcut-item">
-                                <div class="shortcut-circle yt-circle">&#9654;</div>
-                                <span>YouTube</span>
-                            </div>
-                            <div class="demo-shortcut-item">
-                                <div class="shortcut-circle maps-circle">&#9906;</div>
-                                <span>Maps</span>
-                            </div>
-                            <div class="demo-shortcut-item">
-                                <div class="shortcut-circle drive-circle">&#9651;</div>
-                                <span>Drive</span>
-                            </div>
-                        </div>
-                    </div>
+          </div>
+
+          <!-- 1. Enable Extension -->
+          <div class="card-item">
+            <div class="setting-row">
+              <label for="enableExtension" class="bold-label">Enable Extension</label>
+              <input type="checkbox" id="enableExtension" checked>
+            </div>
+            <div class="item-explanation">
+              <strong>Function Description:</strong> Master toggle to enable or disable background wallpapers across your browser without losing your custom configurations.
+            </div>
+          </div>
+
+          <!-- 2. Transparent Mode -->
+          <div class="card-item">
+            <div class="section-header-row">
+              <span class="bold-label">Transparent Mode</span>
+              <span class="section-dash">-</span>
+            </div>
+            
+            <div class="mode-options-list">
+              <div class="mode-row-extended">
+                <div class="mode-btn-wrap">
+                  <button type="button" class="mode-btn active" data-mode="none">None Transparent</button>
                 </div>
-                <div class="demo-panel">
-                    <h3>Adjust the preview</h3>
-                    <label for="demoBlur">Wallpaper blur <output id="demoBlurValue">5 px</output></label>
-                    <input type="range" id="demoBlur" min="0" max="30" value="5">
-                    <label for="demoDimRange">Wallpaper dim <output id="demoDimValue">75%</output></label>
-                    <input type="range" id="demoDimRange" min="0" max="100" step="5" value="75">
-                    <p class="demo-note">Large panels and navigation use 5 px glass blur. Small text surfaces stay sharp.</p>
-                    <fieldset class="demo-colors"><legend>Overlay color</legend>
-                        <label><input type="radio" name="demoColor" value="auto" checked> Auto</label>
-                        <label><input type="radio" name="demoColor" value="dark"> Dark</label>
-                        <label><input type="radio" name="demoColor" value="light"> Light</label>
-                    </fieldset>
-                    <div class="demo-auto-colors" id="demoAutoColorRow">
-                        <div class="demo-auto-color-item">
-                            <label for="demoAutoDark">Dark Theme</label>
-                            <input type="color" id="demoAutoDark" value="#000000">
-                            <output id="demoAutoDarkValue">#000000</output>
-                        </div>
-                        <div class="demo-auto-color-item">
-                            <label for="demoAutoLight">Light Theme</label>
-                            <input type="color" id="demoAutoLight" value="#ffffff">
-                            <output id="demoAutoLightValue">#FFFFFF</output>
-                        </div>
-                    </div>
-                    <p class="demo-note" id="demoThemeNote" role="status">Auto follows your device theme.</p>
-                    <button class="demo-reset" type="button" id="demoReset">Reset preview</button>
+                <div class="mode-desc-box">
+                  <strong>None Transparent:</strong> Preserves original solid website content boxes. Wallpapers are displayed exclusively behind the page in outer margins. Recommended for 100% original text contrast.
                 </div>
-            </div>
-        </section>
+              </div>
 
-        <section id="how-to-use" class="guide-section" aria-labelledby="guideTitle">
-            <div class="section-heading">
-                <p class="eyebrow">GET STARTED IN 3 STEPS</p>
-                <h2 id="guideTitle">How to use the extension</h2>
-                <p>All settings are available by clicking the extension icon in the browser toolbar.</p>
+              <div class="mode-row-extended">
+                <div class="mode-btn-wrap">
+                  <button type="button" class="mode-btn" data-mode="glass">Glass UI</button>
+                </div>
+                <div class="mode-desc-box">
+                  <strong>Glass UI:</strong> Elegant frosted-glass effect with subtle backdrop blur. Balances modern aesthetics with high readability by allowing wallpapers to shine softly through containers.
+                </div>
+              </div>
+
+              <div class="mode-row-extended">
+                <div class="mode-btn-wrap">
+                  <button type="button" class="mode-btn" data-mode="transparent">Transparent</button>
+                </div>
+                <div class="mode-desc-box">
+                  <strong>Transparent:</strong> Makes website surface containers fully transparent so your background wallpaper is completely unobstructed across the entire screen.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Checkbox Options -->
+          <div class="card-item checkboxes-group">
+            <div class="setting-row">
+              <span>Enable Animations</span>
+              <input type="checkbox" id="enableAnimations">
+            </div>
+            <div class="item-explanation">
+              <strong>Enable Animations:</strong> Provides a smooth, subtle fade-in transition when wallpapers are loaded onto new browser tabs.
             </div>
 
-            <ol class="step-grid">
-                <li class="step-card">
-                    <span class="step-label">STEP 01</span>
-                    <div class="step-icon" aria-hidden="true">&#8593;</div>
-                    <h3>Choose a background</h3>
-                    <p>Click <strong>Choose File</strong> to use a JPG, PNG, GIF, or MP4 from your device.</p>
-                    <span class="or-divider">OR</span>
-                    <p>Paste a media link into the URL field, then click <strong>Apply URL</strong>.</p>
-                </li>
-                <li class="step-card featured">
-                    <span class="step-label">STEP 02</span>
-                    <div class="step-icon" aria-hidden="true">&#9788;</div>
-                    <h3>Customize its appearance</h3>
-                    <p>Glass UI gives page backgrounds a translucent finish while keeping buttons and inputs clear. Adjust <strong>Blur</strong> and <strong>Dim</strong>; <strong>Auto</strong> chooses a white or black overlay from your device theme.</p>
-                    <div class="mini-controls" aria-hidden="true">
-                        <span>Blur</span><i><b class="blur-fill"></b></i>
-                        <span>Dim</span><i><b class="dim-fill"></b></i>
+            <div class="setting-row" style="margin-top: 6px;">
+              <span>Correct Text Color</span>
+              <input type="checkbox" id="correctTextColor">
+            </div>
+            <div class="item-explanation">
+              <strong>Correct Text Color:</strong> Intelligently detects and optimizes website text colors to ensure high contrast and readability over light or dark wallpapers.
+            </div>
+          </div>
+
+          <!-- 4. Background Media -->
+          <div class="card-item">
+            <label class="bold-label section-title">Background Media (JPG, PNG, GIF, MP4)</label>
+            <p class="small-hint">Supports images and MP4 video backgrounds.</p>
+            
+            <div class="file-upload-box">
+              <label for="mediaFileInput" class="custom-file-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Choose File...
+              </label>
+              <input type="file" id="mediaFileInput" accept="image/*,video/mp4" style="display: none;">
+              <button type="button" id="btnBuiltIn" class="link-btn">Built-in background</button>
+            </div>
+
+            <div class="separator-text"><span>OR ENTER MEDIA URL</span></div>
+
+            <div class="url-input-group">
+              <input type="url" id="mediaUrlInput" placeholder="https://example.com/wallpaper.jpg">
+              <button type="button" id="btnApplyUrl" class="secondary-btn">Apply URL</button>
+            </div>
+
+            <div class="item-explanation">
+              <strong>Function Description:</strong> Upload any local image or MP4 video via <i>Choose File</i>, restore the default wallpaper via <i>Built-in background</i>, or stream directly via an image URL.
+            </div>
+          </div>
+
+          <!-- 5. Quick Presets with SVG Icons -->
+          <div class="card-item">
+            <label class="bold-label section-title">Quick Presets (Blur & Dim):</label>
+            <div class="presets-list">
+              <button type="button" class="preset-btn active" data-blur="0" data-dim="75">
+                <span class="preset-name">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  Default (Vivid & Clear)
+                </span>
+                <span class="preset-badge">Blur: 0px • Dim: 75%</span>
+              </button>
+              <div class="preset-desc-inline">Balanced preset with sharp, vivid imagery and 75% dimming for daily comfortable browsing.</div>
+
+              <button type="button" class="preset-btn" data-blur="5" data-dim="75">
+                <span class="preset-name">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  Eye-Care
+                </span>
+                <span class="preset-badge">Blur: 5px • Dim: 75%</span>
+              </button>
+              <div class="preset-desc-inline">Gentle 5px blur to soften background clutter and reduce eye fatigue during long reading sessions.</div>
+
+              <button type="button" class="preset-btn" data-blur="25" data-dim="50">
+                <span class="preset-name">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                  Deep Focus
+                </span>
+                <span class="preset-badge">Blur: 25px • Dim: 50%</span>
+              </button>
+              <div class="preset-desc-inline">Heavy 25px blur with 50% dimming creating a soft bokeh aesthetic that keeps your primary focus on web tasks.</div>
+
+              <div class="preset-custom-row" id="customPresetRow">
+                <span class="custom-badge-title">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0d6efd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  Custom
+                </span>
+                <span class="preset-badge custom-val-badge" id="customPresetBadge">Blur: 0px • Dim: 75%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. Sliders (Blur & Dim) -->
+          <div class="card-item sliders-group">
+            <label class="bold-label section-title">Custom Sliders (Blur & Dim)</label>
+
+            <div class="slider-control">
+              <div class="slider-header">
+                <span>Background Blur:</span>
+                <span id="blurValDisplay" class="val-badge">0px</span>
+              </div>
+              <input type="range" id="blurRange" min="0" max="30" value="0">
+              <span class="slider-caption">Range: 0px (sharp) to 30px (bokeh blur). Softens background elements.</span>
+            </div>
+
+            <div class="slider-control" style="margin-top: 10px;">
+              <div class="slider-header">
+                <span>Background Dim:</span>
+                <span id="dimValDisplay" class="val-badge">75%</span>
+              </div>
+              <input type="range" id="dimRange" min="0" max="100" value="75">
+              <span class="slider-caption">Range: 0% (full bright) to 100% (full dark). Guarantees text readability.</span>
+            </div>
+          </div>
+
+          <!-- 7. Dim Overlay Color & Theme Color Picker (Theme Color radio removed) -->
+          <div class="card-item">
+            <label class="bold-label section-title">Dim Overlay Color:</label>
+            <div class="radio-inline-group">
+              <label class="radio-label"><input type="radio" name="overlayColor" value="auto" checked> Auto</label>
+              <label class="radio-label"><input type="radio" name="overlayColor" value="dark"> Dark</label>
+              <label class="radio-label"><input type="radio" name="overlayColor" value="light"> Light</label>
+            </div>
+
+            <div class="theme-color-box">
+              <div class="color-row">
+                <label for="darkThemePicker">Dark Theme Color</label>
+                <div class="color-picker-wrapper">
+                  <input type="color" id="darkThemePicker" value="#000000">
+                  <span class="hex-text" id="darkHex">#000000</span>
+                </div>
+              </div>
+              <div class="color-row">
+                <label for="lightThemePicker">Light Theme Color</label>
+                <div class="color-picker-wrapper">
+                  <input type="color" id="lightThemePicker" value="#ffffff">
+                  <span class="hex-text" id="lightHex">#ffffff</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="item-explanation">
+              <strong>Function Description:</strong> In <i>Auto</i> mode, the overlay dynamically adopts your configured <b>Dark Theme Color</b> or <b>Light Theme Color</b> based on your active browser and system theme, applying seamlessly across both websites and this welcome background!
+            </div>
+          </div>
+
+          <!-- 8. Actions (No Advanced Mode) -->
+          <div class="actions-group">
+            <button type="button" id="btnResetDefaults" class="secondary-btn text-danger">Reset Defaults</button>
+            <button type="button" id="btnApplySave" class="primary-btn-save">Apply & Save</button>
+          </div>
+
+
+        </div>
+
+        <!-- Right Column: Target Websites + Live Mockup YouTube UI Preview -->
+        <div class="preview-panel">
+          <!-- Target Websites Card (Placed on Right Panel) -->
+          <div class="side-card target-websites-card" style="margin-bottom: 16px;">
+            <div class="side-card-header">
+              <span class="side-card-title">Target Websites</span>
+              <span class="side-card-tag" id="siteCounter">All Sites</span>
+            </div>
+
+            <div class="radio-inline-group mb-2">
+              <label class="radio-label">
+                <input type="radio" name="targetWebsites" value="all" checked> All Websites
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="targetWebsites" value="specific"> Specific Websites
+              </label>
+            </div>
+
+            <div class="specific-sites-wrapper" id="specificSitesWrapper" style="display: none;">
+              <div class="specific-actions-row">
+                <button type="button" id="btnAddCurrentSite" class="small-action-btn">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>Add Current Website</span>
+                </button>
+                <span class="sites-limit-tag" id="sitesLimitTag">0/10 sites</span>
+              </div>
+
+              <div class="add-site-input-row">
+                <input type="text" id="siteInput" placeholder="e.g. youtube.com">
+                <button type="button" id="btnAddSite" class="small-primary-btn">Add</button>
+              </div>
+
+              <div class="sites-chips-container" id="sitesList"></div>
+              <p class="site-hint-msg">Add up to 10 websites where custom background wallpapers should be active.</p>
+            </div>
+          </div>
+
+          <!-- Simulated YouTube Environment -->
+          <div class="preview-sticky-wrap">
+            <div class="preview-browser-bar">
+              <div class="browser-window-dots">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+              </div>
+              <div class="preview-url-bar">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span>https://www.youtube.com (Live Preview Simulator)</span>
+              </div>
+              <span class="live-indicator">● LIVE SIMULATOR</span>
+            </div>
+
+            <div class="yt-mockup" id="ytMockup">
+              <!-- Background Wallpaper Layer Inside Mockup -->
+              <div class="yt-bg-layer" id="ytBgLayer"></div>
+              <div class="yt-overlay-tint" id="ytOverlayTint"></div>
+
+              <!-- YouTube Navbar -->
+              <header class="yt-navbar">
+                <div class="yt-nav-left">
+                  <div class="yt-menu-icon" title="Menu">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                  </div>
+                  <div class="yt-logo">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#ff0000"><path d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.26 5 12 5 12 5s-6.26 0-7.82.42a2.5 2.5 0 0 0-1.76 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81a2.5 2.5 0 0 0 1.76 1.77c1.56.42 7.82.42 7.82.42s6.26 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81zM10 15V9l5.2 3-5.2 3z"/></svg>
+                    <span class="yt-text">YouTube</span>
+                  </div>
+                </div>
+
+                <div class="yt-search-box">
+                  <input type="text" placeholder="Search videos, tutorials, music..." disabled>
+                  <button type="button" disabled title="Search">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  </button>
+                  <span class="yt-mic-icon" title="Voice Search">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                  </span>
+                </div>
+
+                <div class="yt-nav-right">
+                  <span class="yt-action-icon" title="Create">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </span>
+                  <span class="yt-action-icon" title="Notifications">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  </span>
+                  <div class="yt-avatar"></div>
+                </div>
+              </header>
+
+              <!-- Tags / Chips Filter Bar -->
+              <div class="yt-chips-bar">
+                <span class="yt-chip active">All</span>
+                <span class="yt-chip">Gaming</span>
+                <span class="yt-chip">Music</span>
+                <span class="yt-chip">Web Development</span>
+                <span class="yt-chip">Podcasts</span>
+                <span class="yt-chip">Live</span>
+              </div>
+
+              <!-- Main YouTube Content Layout -->
+              <div class="yt-content-layout">
+                <aside class="yt-sidebar">
+                  <div class="yt-nav-item active">
+                    <span class="yt-nav-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </span>
+                    <span>Home</span>
+                  </div>
+                  <div class="yt-nav-item">
+                    <span class="yt-nav-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </span>
+                    <span>Shorts</span>
+                  </div>
+                  <div class="yt-nav-item">
+                    <span class="yt-nav-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    </span>
+                    <span>Subscriptions</span>
+                  </div>
+                  <div class="yt-nav-divider"></div>
+                  <div class="yt-nav-item">
+                    <span class="yt-nav-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    </span>
+                    <span>Library</span>
+                  </div>
+                  <div class="yt-nav-item">
+                    <span class="yt-nav-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+                    </span>
+                    <span>History</span>
+                  </div>
+                </aside>
+
+                <!-- YouTube Video Feed Grid -->
+                <main class="yt-feed">
+                  <div class="yt-card">
+                    <div class="yt-thumb">
+                      <div class="yt-thumb-placeholder">Video Thumbnail 1</div>
+                      <span class="video-duration">14:20</span>
                     </div>
-                </li>
-                <li class="step-card">
-                    <span class="step-label">STEP 03</span>
-                    <div class="step-icon" aria-hidden="true">&#10003;</div>
-                    <h3>Apply &amp; save</h3>
-                    <p>Click <strong>Apply &amp; Save</strong>. The extension starts with 5 px blur and 75% dim. Refresh a website tab if the effect is not immediately visible.</p>
-                    <div class="fake-save">Apply &amp; Save</div>
-                </li>
-            </ol>
-        </section>
+                    <div class="yt-meta">
+                      <div class="yt-channel-icon c1"></div>
+                      <div class="yt-details">
+                        <div class="yt-title-line">Custom Web Background — Setup & Feature Walkthrough</div>
+                        <div class="yt-channel-name">Tech Channel • 1.2M views • 2 days ago</div>
+                      </div>
+                    </div>
+                  </div>
 
-        <section class="feature-section" aria-labelledby="featureTitle">
-            <div class="section-heading">
-                <p class="eyebrow">EXPLORE THE SETTINGS</p>
-                <h2 id="featureTitle">Make every page comfortable to view</h2>
+                  <div class="yt-card">
+                    <div class="yt-thumb">
+                      <div class="yt-thumb-placeholder">Video Thumbnail 2</div>
+                      <span class="video-duration">08:45</span>
+                    </div>
+                    <div class="yt-meta">
+                      <div class="yt-channel-icon c2"></div>
+                      <div class="yt-details">
+                        <div class="yt-title-line">Modern Frosted Glassmorphism UI Tutorial</div>
+                        <div class="yt-channel-name">Design Masters • 450K views • 1 week ago</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="yt-card">
+                    <div class="yt-thumb">
+                      <div class="yt-thumb-placeholder">Video Thumbnail 3</div>
+                      <span class="video-duration">22:10</span>
+                    </div>
+                    <div class="yt-meta">
+                      <div class="yt-channel-icon c3"></div>
+                      <div class="yt-details">
+                        <div class="yt-title-line">Lofi Chill Beats — Relax & Focus Study Music 24/7</div>
+                        <div class="yt-channel-name">Lofi Girl • 3.4M views • Streamed live</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="yt-card">
+                    <div class="yt-thumb">
+                      <div class="yt-thumb-placeholder">Video Thumbnail 4</div>
+                      <span class="video-duration">05:32</span>
+                    </div>
+                    <div class="yt-meta">
+                      <div class="yt-channel-icon c4"></div>
+                      <div class="yt-details">
+                        <div class="yt-title-line">Best Productivity Browser Extensions in 2026</div>
+                        <div class="yt-channel-name">Productivity Hub • 820K views • 3 days ago</div>
+                      </div>
+                    </div>
+                  </div>
+                </main>
+              </div>
+
+              <!-- Live Badge Indicator -->
+              <div class="preview-mode-tag" id="previewModeTag">Mode: None Transparent</div>
             </div>
-            <div class="feature-grid">
-                <article><span aria-hidden="true">▧</span><div><h3>Image, GIF &amp; MP4</h3><p>Upload a file or paste a direct media URL to choose your wallpaper.</p></div></article>
-                <article><span aria-hidden="true">◈</span><div><h3>Glass UI</h3><p>Translucent page surfaces reveal the wallpaper while controls remain usable.</p></div></article>
-                <article><span aria-hidden="true">◌</span><div><h3>Blur &amp; Dim</h3><p>Blur softens the wallpaper; dim adds a black, white, or custom color overlay.</p></div></article>
-                <article><span aria-hidden="true">◐</span><div><h3>Auto theme color</h3><p>Auto uses black on dark devices and white on light devices, following theme changes.</p></div></article>
-                <article><span aria-hidden="true">Aa</span><div><h3>Correct Text Color</h3><p>Optional text correction helps neutral text remain legible on the chosen background.</p></div></article>
-                <article><span aria-hidden="true">▣</span><div><h3>Readable popups</h3><p>Dialogs, menus, forms, and floating panels keep their original backgrounds automatically.</p></div></article>
-                <article><span aria-hidden="true">↗</span><div><h3>UI Animations</h3><p>Controls can have gentle hover motion. The wallpaper fades in once when it changes or you navigate, without zooming or pulsing.</p></div></article>
-                <article><span aria-hidden="true">⏻</span><div><h3>Quick on/off</h3><p>Disable the effect from the popup without deleting your wallpaper or settings.</p></div></article>
+
+            <!-- Preview Notice -->
+            <div class="preview-notice-box">
+              <span class="notice-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+              </span>
+              <span>Modify settings on the left panel to preview changes instantly on the YouTube interface and welcome background!</span>
             </div>
-        </section>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    </main>
-
-    <footer>
-        <p>Custom Web Background <span aria-hidden="true">&middot;</span> Settings and media are stored locally in your browser.</p>
+    <!-- Footer Tips & Features -->
+    <footer class="welcome-footer">
+      <div class="tips-box">
+        <h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+          Tips & Tricks for the Best Experience
+        </h3>
+        <ul>
+          <li><strong>Auto Theme Adaptation:</strong> When Dim Overlay Color is set to <i>Auto</i>, the overlay color automatically follows your custom Dark or Light theme color based on your browser/system mode.</li>
+          <li><strong>Glass UI Mode:</strong> Most balanced mode for reading articles, coding, and browsing because text preserves high contrast over frosted blurred glass.</li>
+          <li><strong>MP4 Video Backgrounds:</strong> The extension supports lightweight <code>.mp4</code> video files for animated, living backgrounds with zero lag.</li>
+          <li><strong>Quick Access:</strong> Access settings anytime by clicking the extension icon in your Chrome toolbar.</li>
+        </ul>
+      </div>
+      <p class="copyright-note">Custom Web Background - Add Wallpaper to Any Websites • Built for your ultimate browsing aesthetics.</p>
     </footer>
 
-    <script src="welcome.js"></script>
-</body>
+  </div>
 
+  <script src="welcome.js"></script>
+</body>
 </html>
